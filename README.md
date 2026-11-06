@@ -1,54 +1,116 @@
 # TeamFlow AI
 
-Dự án nhóm TV1/TV2/TV3 tham gia **DevDay Exchange Community: Da Nang City**, hỗ trợ nhóm nhỏ lập kế hoạch, theo dõi và nghiệm thu công việc bằng ba agent.
+Dự án nhóm TV1/TV2/TV3 tham gia **DevDay Exchange Community: Da Nang City**, hỗ trợ nhóm nhỏ (3–8 người) lập kế hoạch, theo dõi và nghiệm thu công việc bằng ba trợ lý AI.
 
-## Hiện trạng
+---
 
-Tại thời điểm soạn bộ tài liệu, repository chỉ có file prompt đầu vào, chưa có mã ứng dụng, manifest dependency, database hay script chạy. Bộ tài liệu này là kế hoạch cho **phiên triển khai 240 phút sau**, không phải báo cáo sản phẩm hoàn thành.
+## 1. Hiện Trạng Repository
 
-- Hiện có: tài liệu quy tắc, contracts thiết kế, nhiệm vụ, timeline và kịch bản demo.
-- Stack frontend/backend/database, cơ chế session cụ thể, nhà cung cấp/model AI và môi trường chạy: **chưa chốt**.
-- Setup/run: **chưa triển khai**; chưa có lệnh được xác minh từ repository để hướng dẫn chạy ứng dụng. Không suy ra lệnh cài đặt hoặc build.
-- Mọi module, API, entity và JSON được mô tả bên dưới là **đặc tả dự kiến**, chưa có triển khai. Không có tuyên bố build/test pass.
+Repository hiện đã hoàn tất phiên **Khởi tạo khung kiến trúc nền tảng (Project Scaffolding)**:
+- Đã thiết lập cấu trúc mã nguồn Next.js App Router, hệ thống TypeScript contracts, layout và các trang placeholder.
+- Đã cấu hình bộ token màu sắc, typography và trạng thái công việc tại `src/app/globals.css`.
+- Đã tạo các route handler API stub trả về mã **HTTP 501 Not Implemented** theo hợp đồng thiết kế.
+- Đã cấu hình điểm nối cơ sở dữ liệu **Neon PostgreSQL** qua Drizzle ORM theo cơ chế khởi tạo lười (Lazy connection).
+- **Tuyệt đối chưa có logic nghiệp vụ**: Chưa có bảng database thực, chưa có auth/session, chưa gọi AI provider và chưa có dữ liệu demo.
 
-## Sản phẩm dự kiến
+---
 
-| Agent | Vai trò |
-|---|---|
-| Planner | Thu thập mục tiêu, đầu ra, thành viên, kỹ năng, giờ khả dụng, deadline; đề xuất kế hoạch/task để trưởng nhóm sửa và duyệt trước khi công bố. |
-| Reviewer | Đối chiếu bài nộp với từng tiêu chí; chỉ ra bằng chứng, thiếu sót và hướng chỉnh sửa. |
-| Coordinator | Nhận cập nhật chat, ghi tiến độ/trở ngại; tổng hợp báo cáo tuần. TV3 triển khai phần báo cáo để cân bằng khối lượng. |
+## 2. Công Nghệ và Yêu Cầu Môi Trường (Stack)
 
-MVP phiên sau gồm:
+- **Runtime & Ngôn ngữ**: Node.js `>= 24.0.0` (Khuyến nghị `24.19.x`), npm `>= 11.0.0`.
+- **Framework**: [Next.js 16 (App Router)](https://nextjs.org/) + [React 19](https://react.dev/).
+- **Ngôn ngữ**: [TypeScript](https://www.typescriptlang.org/) (Strict mode).
+- **Styling**: [Tailwind CSS v4](https://tailwindcss.com/) (Mapping token từ [DESIGN_SYSTEM.md](docs/ui/DESIGN_SYSTEM.md)).
+- **Database & ORM**: [Neon Serverless PostgreSQL](https://neon.com/) + [Drizzle ORM](https://orm.drizzle.team/).
+- **Validation**: [Zod v4](https://zod.dev/) cho contracts dữ liệu.
 
-- Nhập dự án và thành viên; AI tạo kế hoạch nháp, sửa trực tiếp, trưởng nhóm duyệt/công bố task.
-- Bảng task dạng danh sách; chat trong ứng dụng gắn đúng task, hỏi lại khi mơ hồ.
-- Nộp văn bản/Markdown/đoạn mã, review theo tiêu chí, sửa và nộp lại; con người nghiệm thu hoàn thành.
-- Báo cáo tuần tạo **bằng nút**, dựa trên dữ liệu đã lưu và có nguồn. Đây chưa phải tự động chạy theo lịch.
-- Lưu dữ liệu phía server để vẫn còn sau khi tải lại trang.
+---
 
-Để sau: Google Calendar/Meet thật, OAuth Google, bot ngoài ứng dụng, đọc link/repository/tệp, scheduler, kéo thả Kanban, đa workspace, tự đổi deadline và tái lập kế hoạch phức tạp.
+## 3. Hướng Dẫn Cài Đặt và Chạy Ứng Dụng (Setup & Scripts)
 
-## Phân công và mốc bàn giao
+### Cài đặt dependencies
+```bash
+npm ci
+# hoặc: npm install
+```
 
-| Thành viên | Sở hữu UI + API + logic | Đầu mối dùng chung |
+### Chạy kiểm tra mã nguồn (Lint & Typecheck)
+```bash
+npm run check
+# bao gồm: npm run lint (eslint) && npm run typecheck (next typegen && tsc --noEmit)
+```
+
+### Khởi chạy môi trường phát triển (Dev server)
+```bash
+npm run dev
+# Mở trình duyệt tại: http://localhost:3000
+```
+> [!NOTE]
+> Ứng dụng ở mức placeholder **chạy được ngay mà không cần cấu hình database hay API key AI**. Các trang P01–P08 đều mở được bình thường.
+
+### Biên dịch bản phát hành (Production build)
+```bash
+npm run build
+npm run start
+```
+
+---
+
+## 4. Danh Sách Tuyến Đường (Routes & API Stubs)
+
+### Giao diện Người dùng (UI Pages — Mức Placeholder)
+- `/`: **P01 — Landing Page** (Chủ quản: TV1).
+- `/app`: **P02 — Danh sách dự án & Điểm vào Demo** (Chủ quản: TV1/TV2).
+- `/app/projects/new`: **P03 — Wizard tạo dự án 3 bước** (Chủ quản: TV1).
+- `/app/projects/:projectId/plan`: **P04 — Xem, sửa & duyệt kế hoạch** (Chủ quản: TV1).
+- `/app/projects/:projectId/tasks`: **P05 — Workspace quản lý công việc** (Chủ quản: TV2).
+- `/app/projects/:projectId/tasks/:taskId`: **P06 — Chi tiết công việc & Nghiệm thu** (Chủ quản: TV2/TV3).
+- `/app/projects/:projectId/chat`: **P07 — Kênh trao đổi & Coordinator tracking** (Chủ quản: TV2).
+- `/app/projects/:projectId/reports`: **P08 — Báo cáo tiến độ tuần** (Chủ quản: TV3).
+
+### Tuyến API Kiểm tra Trạng thái
+- `GET /api/health`: Trả về `200 OK` phản ánh trạng thái tiến trình (không tuyên bố kết nối DB/AI).
+
+### Tuyến API Nghiệp vụ (Hiện trả mã HTTP 501)
+- **Planning (TV1)**: `/api/projects`, `/api/projects/:id`, `/api/projects/:id/members`, `/api/projects/:id/plan`, `/api/plans/:id/draft`, `/api/plans/:id/publish`.
+- **Tracking (TV2)**: `/api/session`, `/api/users`, `/api/projects/:id/tasks`, `/api/tasks/:id`, `/api/projects/:id/messages`, `/api/tasks/:id/progress-updates`, `/api/messages/:id/resolve`.
+- **Delivery & AI (TV3)**: `/api/tasks/:id/submissions`, `/api/submissions/:id/review`, `/api/tasks/:id/accept`, `/api/projects/:id/reports`, `/api/reports/:id`.
+
+---
+
+## 5. Hướng Dẫn Cấu Hình Neon Database và Bảo Vệ Bí Mật
+
+Khi bắt đầu phiên triển khai nghiệp vụ, thành viên cần cấu hình chuỗi kết nối Neon:
+1. Đăng nhập [Neon Console](https://console.neon.tech/), chọn dự án của nhóm.
+2. Sao chép chuỗi kết nối:
+   - Dùng URL **Pooled connection** cho biến `DATABASE_URL` (cho runtime ứng dụng).
+   - Dùng URL **Direct connection** (Unpooled) cho biến `DATABASE_DIRECT_URL` (cho công cụ migration Drizzle).
+3. Tạo tệp `.env.local` ở thư mục gốc (tệp này được `.gitignore` bảo vệ, tuyệt đối không commit lên Git):
+   ```env
+   DATABASE_URL=postgresql://user:password@ep-xyz-pooler.region.neon.tech/neondb?sslmode=require
+   DATABASE_DIRECT_URL=postgresql://user:password@ep-xyz.region.neon.tech/neondb?sslmode=require
+   OPENAI_API_KEY=sk-...
+   OPENAI_MODEL=gpt-4o-mini
+   ```
+
+---
+
+## 6. Phân Công Trách Nhiệm và Tài Liệu Hướng Dẫn
+
+| Thành viên | Trách nhiệm chính | Tài liệu nhiệm vụ |
 |---|---|---|
-| TV1 | Nhập dự án/thành viên, Planner, sửa nháp, duyệt/công bố chống trùng | Layout, điều hướng, UI cơ bản |
-| TV2 | Bảng task, chat, Coordinator cập nhật/trở ngại; DB/session/quyền server | Database, migration/seed, contracts và tích hợp |
-| TV3 | Lớp AI, nộp bài, Reviewer, nộp lại, nghiệm thu, báo cáo | AI dùng chung; backend tính số liệu, AI tóm tắt có nguồn |
+| **TV1** | Giao diện chung, Shell layout, Landing Page (P01), Wizard tạo dự án (P03), Kế hoạch (P04), API planning | [TV1_PLANNING.md](docs/tasks/TV1_PLANNING.md) |
+| **TV2** | Bảng task (P05), Drawer shell (P06), Chat (P07), DB Neon, Migration Drizzle, Session/Auth, API tracking | [TV2_TRACKING.md](docs/tasks/TV2_TRACKING.md) |
+| **TV3** | Form nộp bài & Bảng review trong P06, Báo cáo tuần (P08), Tầng tích hợp AI chung, API delivery/reports | [TV3_DELIVERY.md](docs/tasks/TV3_DELIVERY.md) |
 
-Phút 90: từng luồng thao tác độc lập được với dữ liệu mẫu cùng contract. Phút 135: vòng chính dùng chung project/task thật và dữ liệu lưu thật. Từ phút 180 ngừng thêm tính năng, giữ 60 phút cuối cho ổn định và demo.
-
-## Tài liệu
-
-- [AGENTS — hướng dẫn Codex](AGENTS.md)
-- [Quy tắc dự án và ownership](docs/PROJECT_RULES.md)
-- [Contracts thiết kế](docs/CONTRACTS.md)
-- [TV1 — Planning](docs/tasks/TV1_PLANNING.md)
-- [TV2 — Tracking](docs/tasks/TV2_TRACKING.md)
-- [TV3 — Delivery](docs/tasks/TV3_DELIVERY.md)
-- [Timeline 4 giờ](docs/TIMELINE_4H.md)
-- [Bắt đầu phiên triển khai — ba prompt](docs/START_HERE.md)
-- [Checklist demo 3–4 phút](docs/DEMO_CHECKLIST.md)
-
-Các checklist triển khai hiện đều chưa hoàn thành. Nhóm cần chốt stack, tài khoản demo/session, người nghiệm thu và cấu hình AI trong 30 phút đầu phiên triển khai; xem các quyết định cụ thể trong contracts.
+### Liên kết tài liệu quan trọng
+- 📋 [Tài liệu Bàn giao Khung sườn](docs/SCAFFOLD_HANDOFF.md)
+- 📐 [Quy tắc Giao diện (UI Rules)](docs/ui/UI_RULES.md)
+- 🎨 [Hệ thống Thiết kế (Design System)](docs/ui/DESIGN_SYSTEM.md)
+- 🗺️ [Kiến trúc Trang & Luồng (Sitemap & Flows)](docs/ui/SITEMAP_AND_FLOWS.md)
+- 📄 [Đặc tả Màn hình Chi tiết (Page Specs)](docs/ui/PAGE_SPECS.md)
+- 🧩 [Danh mục Thành phần & Trạng thái (Component States)](docs/ui/COMPONENT_STATES.md)
+- ✅ [Checklist Nghiệm thu UI](docs/ui/UI_ACCEPTANCE_CHECKLIST.md)
+- 📜 [Hợp đồng Thiết kế MVP (Contracts)](docs/CONTRACTS.md)
+- ⏱️ [Kế hoạch Thời gian 4 Giờ](docs/TIMELINE_4H.md)
+- 🎬 [Kịch bản Trình diễn Demo 225s](docs/DEMO_CHECKLIST.md)
