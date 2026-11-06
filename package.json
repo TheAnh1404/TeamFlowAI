@@ -1,0 +1,40 @@
+{
+  "name": "teamflow-ai",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "npm@11.17.0",
+  "engines": {
+    "node": ">=24.0.0 <25",
+    "npm": ">=11.0.0 <12"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint . --max-warnings=0",
+    "typecheck": "next typegen && tsc --noEmit",
+    "check": "npm run lint && npm run typecheck"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "1.2.0",
+    "drizzle-orm": "0.45.4",
+    "next": "16.4.5",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "server-only": "0.0.1",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@next/env": "16.4.5",
+    "@tailwindcss/postcss": "4.3.0",
+    "@types/node": "24.13.1",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "drizzle-kit": "0.31.11",
+    "eslint": "9.39.5",
+    "eslint-config-next": "16.4.5",
+    "postcss": "8.5.31",
+    "tailwindcss": "4.3.0",
+    "typescript": "5.9.3"
+  }
+}
