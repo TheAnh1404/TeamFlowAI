@@ -1,0 +1,69 @@
+@import "tailwindcss";
+
+/* Source: docs/ui/DESIGN_SYSTEM.md. TODO(TV1): product UI, shell and components. */
+@theme {
+  --color-canvas: #F8FAFC;
+  --color-surface: #FFFFFF;
+  --color-surface-subtle: #F1F5F9;
+  --color-text-primary: #0F172A;
+  --color-text-secondary: #475569;
+  --color-text-muted: #64748B;
+  --color-border-subtle: #E2E8F0;
+  --color-control-border: #64748B;
+  --color-primary: #0F766E;
+  --color-primary-hover: #115E59;
+  --color-primary-soft: #F0FDFA;
+  --color-on-primary: #FFFFFF;
+  --color-focus-ring: #0F766E;
+  --color-status-todo-fg: #475569;
+  --color-status-todo-bg: #F1F5F9;
+  --color-status-in-progress-fg: #1E40AF;
+  --color-status-in-progress-bg: #EFF6FF;
+  --color-status-blocked-fg: #92400E;
+  --color-status-blocked-bg: #FFFBEB;
+  --color-status-in-review-fg: #115E59;
+  --color-status-in-review-bg: #F0FDFA;
+  --color-status-changes-requested-fg: #9A3412;
+  --color-status-changes-requested-bg: #FFF7ED;
+  --color-status-done-fg: #166534;
+  --color-status-done-bg: #F0FDF4;
+  --color-overdue: #B91C1C;
+  --color-overdue-soft: #FEF2F2;
+  --color-destructive: #B91C1C;
+  --color-destructive-hover: #991B1B;
+  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+body {
+  margin: 0;
+  background: var(--color-canvas);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+main {
+  max-width: 48rem;
+  margin-inline: auto;
+  padding: 2rem 1rem;
+  overflow-wrap: anywhere;
+}
+
+h1 {
+  margin-block: 0 1rem;
+  font-size: 1.75rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+p { margin-block: 0 1rem; }
+a { color: var(--color-primary); text-decoration: underline; }
+a:hover { color: var(--color-primary-hover); }
+a:focus-visible, button:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+nav ul { margin: 0; padding: 0; list-style: none; }
+nav a { display: inline-flex; align-items: center; min-height: 44px; }
