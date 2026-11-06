@@ -11,6 +11,7 @@ TeamFlow AI là dự án của TV1/TV2/TV3 tại DevDay Exchange Community: Da N
 - Kế hoạch chưa duyệt không công bố task; công bố phải chống trùng khi retry. Chat chỉ cập nhật đúng task/đúng quyền, không đổi người phụ trách/deadline/tiêu chí; mơ hồ phải hỏi lại. Không suy “gần xong” thành phần trăm.
 - Review phải có bằng chứng hoặc `insufficient_evidence`; chỉ trưởng nhóm/người nghiệm thu xác nhận `done`. Báo cáo có khoảng thời gian/nguồn đã lưu, tách thời điểm nộp và nghiệm thu; nút tạo báo cáo không phải scheduler.
 - Dùng dữ liệu mẫu cùng contract để phát triển UI/AI khi chờ dependency; ghi rõ mock hay AI thật. Giữ nguyên thay đổi chưa commit và nội dung ngoài nhiệm vụ. Chỉ báo checks thực sự đã chạy và tính năng thực sự đã kiểm chứng.
+- Khi triển khai giao diện: bắt buộc đọc và tuân thủ [UI_RULES](docs/ui/UI_RULES.md), [DESIGN_SYSTEM](docs/ui/DESIGN_SYSTEM.md), [SITEMAP_AND_FLOWS](docs/ui/SITEMAP_AND_FLOWS.md), [PAGE_SPECS](docs/ui/PAGE_SPECS.md), [COMPONENT_STATES](docs/ui/COMPONENT_STATES.md) và [UI_ACCEPTANCE_CHECKLIST](docs/ui/UI_ACCEPTANCE_CHECKLIST.md). Dùng token màu cố định, không thêm trang ngoài scope MVP, không dùng phần trăm giả và giữ con người phê duyệt.
 - Không tạo `AGENTS.override.md`, không sửa cấu hình Codex ngoài repo. Không commit/push/tạo nhánh/remote nếu phiên hiện tại chưa yêu cầu. Nhánh trong tài liệu chỉ là đề xuất.
 
 Mở phiên mới sau khi file này được tạo/cập nhật; dùng prompt tại [START_HERE](docs/START_HERE.md) khi thực sự bắt đầu triển khai.
