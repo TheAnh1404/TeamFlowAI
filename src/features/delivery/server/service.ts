@@ -20,6 +20,20 @@ export class DeliveryServiceError extends Error {
   }
 }
 
+export interface ProjectConsolidatedDeliverable {
+  projectId: Id;
+  isAllTasksAccepted: boolean;
+  totalTasks: number;
+  acceptedTasksCount: number;
+  pendingTasks: { id: string; title: string; status: TaskStatus; assigneeMemberId: string }[];
+  completedSections: {
+    task: Task;
+    acceptedSubmission: Submission | null;
+    review: Review | null;
+  }[];
+  assembledAt: string | null;
+}
+
 export interface DeliveryService {
   submitWork(session: Session, taskId: Id, input: SubmitWorkInput, options: MutationOptions): Promise<SubmitWorkResult>;
   listSubmissions(session: Session, taskId: Id): Promise<Submission[]>;
@@ -29,6 +43,7 @@ export interface DeliveryService {
   generateWeeklyReport(session: Session, projectId: Id, input: GenerateWeeklyReportInput, options: MutationOptions): Promise<WeeklyReport>;
   listReports(session: Session, projectId: Id): Promise<WeeklyReport[]>;
   getReport(session: Session, reportId: Id): Promise<WeeklyReport>;
+  getProjectConsolidatedDeliverable(session: Session, projectId: Id): Promise<ProjectConsolidatedDeliverable>;
 }
 
 export class DefaultDeliveryService implements DeliveryService {
@@ -447,6 +462,58 @@ export class DefaultDeliveryService implements DeliveryService {
       throw new DeliveryServiceError(404, "NOT_FOUND", "Không tìm thấy báo cáo.");
     }
     return report;
+  }
+
+  async getProjectConsolidatedDeliverable(session: Session, projectId: Id): Promise<ProjectConsolidatedDeliverable> {
+    const member = this.getMemberForProject(session, projectId);
+    if (!member) {
+      throw new DeliveryServiceError(404, "NOT_FOUND", "Bạn không thuộc dự án này.");
+    }
+
+    const asOf = new Date().toISOString();
+    const sources = await this.repo.readReportSources(projectId, asOf);
+    const totalTasks = sources.tasks.length;
+    const acceptedTasks = sources.tasks.filter((t) => t.status === "done");
+    const pendingTasks = sources.tasks
+      .filter((t) => t.status !== "done")
+      .map((t) => ({
+        id: t.id,
+        title: t.title,
+        status: t.status,
+        assigneeMemberId: t.assigneeMemberId,
+      }));
+
+    // Bất biến: CHỈ KHI 100% CÔNG VIỆC ĐƯỢC LEADER DUYỆT thì mới xác nhận hoàn chỉnh
+    const isAllTasksAccepted = totalTasks > 0 && pendingTasks.length === 0;
+
+    const completedSections = sources.tasks.map((task) => {
+      const taskSubs = sources.submissions
+        .filter((s) => s.taskId === task.id)
+        .sort((a, b) => b.revision - a.revision);
+      const acceptedSubmission = task.acceptedSubmissionId
+        ? taskSubs.find((s) => s.id === task.acceptedSubmissionId) || taskSubs[0] || null
+        : taskSubs[0] || null;
+
+      const review = acceptedSubmission
+        ? sources.reviews.find((r) => r.submissionId === acceptedSubmission.id) || null
+        : null;
+
+      return {
+        task,
+        acceptedSubmission,
+        review,
+      };
+    });
+
+    return {
+      projectId,
+      isAllTasksAccepted,
+      totalTasks,
+      acceptedTasksCount: acceptedTasks.length,
+      pendingTasks,
+      completedSections,
+      assembledAt: isAllTasksAccepted ? asOf : null,
+    };
   }
 }
 

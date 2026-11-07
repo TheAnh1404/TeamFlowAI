@@ -6,6 +6,7 @@ import type { SourceRef, WeeklyReport } from "@/contracts/report";
 import { routes } from "@/lib/routes";
 import { formatIsoDate } from "@/lib/utils";
 import { ReportSourcesDrawer } from "./ReportSourcesDrawer";
+import { ProjectConsolidatedDeliverableView } from "./ProjectConsolidatedDeliverableView";
 
 interface WeeklyReportViewProps {
   projectId: string;
@@ -18,6 +19,7 @@ export function WeeklyReportView({ projectId }: WeeklyReportViewProps) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeSourceRef, setActiveSourceRef] = useState<SourceRef | null>(null);
+  const [subTab, setSubTab] = useState<"weekly" | "consolidated">("weekly");
 
   // Modal tạo báo cáo
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -146,8 +148,40 @@ export function WeeklyReportView({ projectId }: WeeklyReportViewProps) {
         </div>
       )}
 
-      {/* 2. Report Selector & Create Button */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-surface)] p-4 shadow-xs">
+      {/* Sub Tabs: Weekly Report vs Final Consolidated Deliverable */}
+      <div className="flex border-b border-[var(--color-border-subtle)] gap-6 text-xs font-semibold">
+        <button
+          type="button"
+          onClick={() => setSubTab("weekly")}
+          className={`pb-2.5 transition-colors ${
+            subTab === "weekly"
+              ? "border-b-2 border-[var(--color-primary)] text-[var(--color-primary)]"
+              : "text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
+          }`}
+        >
+          📊 Báo cáo tiến độ tuần
+        </button>
+        <button
+          type="button"
+          onClick={() => setSubTab("consolidated")}
+          className={`pb-2.5 transition-colors flex items-center gap-1.5 ${
+            subTab === "consolidated"
+              ? "border-b-2 border-[var(--color-primary)] text-[var(--color-primary)]"
+              : "text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
+          }`}
+        >
+          <span>🏆</span> Bản Hoàn Chỉnh Toàn Dự Án (Chỉ mở khi 100% duyệt)
+        </button>
+      </div>
+
+      {subTab === "consolidated" && (
+        <ProjectConsolidatedDeliverableView projectId={projectId} />
+      )}
+
+      {subTab === "weekly" && (
+        <>
+          {/* 2. Report Selector & Create Button */}
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-surface)] p-4 shadow-xs">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs font-semibold text-[var(--color-text-secondary)]">Chọn kỳ báo cáo:</span>
           {reports.length === 0 ? (
@@ -357,6 +391,8 @@ export function WeeklyReportView({ projectId }: WeeklyReportViewProps) {
             </p>
           </div>
         </div>
+      )}
+        </>
       )}
 
       {/* Drawer xem chi tiết nguồn dẫn chứng */}

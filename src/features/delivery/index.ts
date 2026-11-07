@@ -12,6 +12,7 @@ export { AcceptanceActions } from "./components/AcceptanceActions";
 export { DeliveryWorkspace } from "./components/DeliveryWorkspace";
 export { ReportSourcesDrawer } from "./components/ReportSourcesDrawer";
 export { WeeklyReportView } from "./components/WeeklyReportView";
+export { ProjectConsolidatedDeliverableView } from "./components/ProjectConsolidatedDeliverableView";
 
 /**
  * Adapter chuẩn để TV2 gắn vào TrackingWorkbench qua prop `renderDelivery`:

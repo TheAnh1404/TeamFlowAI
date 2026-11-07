@@ -125,24 +125,27 @@ Toàn bộ các lệnh kiểm tra bắt buộc của dự án đã chạy và đ
 
 - **`npm test`**: **17/17 tests passed** (Kiểm tra PGlite áp migrations, atomic rollback, idempotency retry, AI timeout/fallback).
 - **`npm run check`**: **0 errors, 0 warnings** (Clean ESLint và TypeScript strict typegen).
-- **`npm run build`**: **Compiled successfully** với Next.js 16 Turbopack (29/29 routes hợp lệ).
+- **`npm run build`**: **Compiled successfully** với Next.js 16 Turbopack (30/30 routes hợp lệ).
 
 ---
 
-## 5. Đánh Giá Bài Nộp Đa Dạng (Bảng Tính Excel, Slide Thuyết Trình & Ảnh Minh Chứng)
+## 5. Đánh Giá Bài Nộp Đa Dạng Dựa Trên Đề Bài Của TV1
 
-Reviewer AI của TV3 được thiết kế để thẩm định đa dạng các loại bài nộp do thành viên hoàn thành:
+Reviewer AI của TV3 đối chiếu bài nộp của thành viên trực tiếp với **đề bài và các tiêu chí ban đầu do TV1 thiết lập**:
 
-1. **Bảng tính & Dữ liệu số liệu (Excel / CSV / Test Matrix)**:
-   - Thành viên nộp các bảng tính số liệu, ma trận kiểm thử (QA test cases) hoặc bảng phân bổ chi phí.
-   - Reviewer AI đối chiếu từng tiêu chí với các cột, hàng và con số trong bảng tính.
-2. **Kịch bản / Cấu trúc Slide thuyết trình (PowerPoint / Presentation)**:
-   - Thành viên nộp dàn ý, nội dung từng slide thuyết trình sprint / dự án.
-   - Reviewer AI kiểm tra xem slide có đáp ứng đủ các luận điểm và thông tin yêu cầu của task hay không.
-3. **Bằng chứng Hình ảnh (Image Evidence & Gallery)**:
-   - Form nộp bài hỗ trợ chèn link ảnh/bằng chứng Markdown `![Mô tả](url)` (UI mockup Figma, ảnh chụp màn hình lỗi đã sửa).
-   - Lịch sử bài nộp tự động hiển thị Gallery ảnh trực quan để Leader và Reviewer AI dễ dàng thẩm định.
-4. **Nguyên tắc Chỉnh sửa (Accountability)**:
-   - Nếu bài nộp còn thiếu sót hoặc chưa đủ chứng cứ $\rightarrow$ AI trả về `insufficient_evidence` kèm hướng dẫn `missing` và `suggestion`.
-   - Task chuyển sang `changes_requested` để **chính người làm phải tự chỉnh sửa và nộp lại revision mới**. AI tuyệt đối không tự viết bù hay tự ý duyệt đạt.
+1. **Đa dạng hình thức bài nộp**: Thành viên có thể nộp bảng dữ liệu bảng tính Excel/CSV, dàn ý slide PowerPoint, hoặc đường dẫn ảnh minh chứng Figma/Screenshots.
+2. **Lời khuyên bám sát đề bài**: Khi chưa đạt, AI trích dẫn đúng tiêu chí của TV1 và đưa ra lời khuyên (`missing`, `suggestion`) để người làm biết chính xác cần bổ sung những gì và nộp lại revision mới. Người làm phải tự sửa, AI không làm thay.
+
+---
+
+## 6. Rào Chắn Nghiệm Thu Toàn Diện: Chỉ Xuất Bản Hoàn Chỉnh Khi Leader Đã Duyệt 100%
+
+Hệ thống bổ sung endpoint `GET /api/projects/[projectId]/consolidated-deliverable` và component `ProjectConsolidatedDeliverableView`:
+
+1. **Khi chưa xong (Dưới 100% công việc được duyệt)**:
+   - Bản Hoàn Chỉnh ở trạng thái **KHÓA CHẶT (Locked)**.
+   - Hiển thị thanh tiến độ và danh sách cụ thể các công việc còn lại đang chờ Leader duyệt để cả nhóm cùng theo dõi.
+2. **Khi 100% công việc đã được Leader đồng ý (All Done)**:
+   - Hệ thống chính thức mở khóa **Bản Tổng Hợp Hoàn Chỉnh Của Dự Án**.
+   - Gom toàn bộ các phần bài làm chính thức đã được Leader duyệt thành một bộ hồ sơ hoàn chỉnh duy nhất của cả nhóm, đầy đủ bằng chứng, tiêu chí đạt và chức năng in ấn / lưu trữ.
 

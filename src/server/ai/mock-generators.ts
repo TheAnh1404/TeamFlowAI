@@ -149,13 +149,13 @@ export function generateMockReviewer(input: ReviewAiInput): ReviewAiProposal {
         suggestion: "Tiêu chí đã được trình bày rõ ràng và có bằng chứng xác thực trong bài nộp.",
       });
     } else if (content.length > 30 && sentences.length > 0) {
-      // Có nội dung nhưng không rõ ràng
+      // Có nội dung nhưng chưa rõ ràng so với yêu cầu ban đầu của TV1
       results.push({
         criterionId: crit.id,
         verdict: "insufficient_evidence",
         evidence: [],
-        missing: `Bài nộp chưa thể hiện rõ tiêu chí: "${crit.text}".`,
-        suggestion: "Bổ sung các bước cụ thể hoặc trích đoạn minh họa để chứng minh tiêu chí này.",
+        missing: `Bài nộp chưa thể hiện rõ tiêu chí yêu cầu ban đầu: "${crit.text}".`,
+        suggestion: `Theo đề bài của Kế hoạch: Bạn cần bổ sung thêm số liệu cụ thể, nội dung chi tiết hoặc hình ảnh minh chứng để làm rõ tiêu chí "${crit.text}". Sau đó hãy nộp lại bản mới.`,
       });
     } else {
       // Nội dung quá sơ sài
@@ -163,8 +163,8 @@ export function generateMockReviewer(input: ReviewAiInput): ReviewAiProposal {
         criterionId: crit.id,
         verdict: "insufficient_evidence",
         evidence: [],
-        missing: `Chưa có thông tin hoặc bằng chứng liên quan tới: "${crit.text}".`,
-        suggestion: "Vui lòng hoàn thiện nội dung và nộp lại bài để được đánh giá.",
+        missing: `Chưa có thông tin hoặc bằng chứng đáp ứng tiêu chí: "${crit.text}".`,
+        suggestion: `Vui lòng đọc kỹ yêu cầu ban đầu của Kế hoạch và hoàn thiện đầy đủ nội dung bài làm trước khi nộp lại.`,
       });
     }
   }
