@@ -14,9 +14,12 @@
     "lint": "eslint . --max-warnings=0",
     "typecheck": "next typegen && tsc --noEmit",
     "check": "npm run lint && npm run typecheck",
-    "db:generate": "node scripts/db-generate.mjs",
-    "db:migrate": "node scripts/db-migrate.mjs",
-    "db:seed": "node scripts/db-seed.mjs",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:seed": "node --conditions=react-server --import tsx scripts/seed.ts",
+    "db:seed:mjs": "node scripts/db-seed.mjs",
+    "test": "node --conditions=react-server --import tsx --test tests/*.test.ts",
+    "test:ui": "tsx tests/browser/run.ts",
     "test:tracking": "node --test --test-isolation=none src/features/tracking/tests/policy.test.mjs src/features/tracking/tests/security.test.mjs",
     "test:tracking:integration": "node scripts/test-tracking-integration.mjs"
   },
@@ -30,16 +33,20 @@
     "zod": "4.6.7"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.15",
     "@next/env": "16.4.5",
+    "@playwright/test": "^1.65.0",
     "@tailwindcss/postcss": "4.3.0",
     "@types/node": "24.13.1",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "drizzle-kit": "0.31.11",
+    "esbuild": "^0.28.2",
     "eslint": "9.39.5",
     "eslint-config-next": "16.4.5",
     "postcss": "8.5.31",
     "tailwindcss": "4.3.0",
+    "tsx": "^4.23.15",
     "typescript": "5.9.3"
   }
 }

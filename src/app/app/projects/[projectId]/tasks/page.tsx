@@ -1,11 +1,11 @@
-import { TaskList } from "@/features/tracking";
+import { TrackingPage } from "@/features/tracking/server/page";
 
-export default async function Page({ params, searchParams }: {
+export default async function Page({
+  params,
+}: {
   params: Promise<{ projectId: string }>;
-  searchParams: Promise<{ q?: string | string[]; status?: string | string[]; assignee?: string | string[] }>;
+  searchParams?: Promise<{ q?: string | string[]; status?: string | string[]; assignee?: string | string[] }>;
 }) {
   const { projectId } = await params;
-  const filters = await searchParams;
-  const first = (value: string | string[] | undefined) => Array.isArray(value) ? value[0] ?? "" : value ?? "";
-  return <TaskList key={projectId} projectId={projectId} initialSearch={first(filters.q)} initialStatus={first(filters.status)} initialAssignee={first(filters.assignee)} />;
+  return <TrackingPage projectId={projectId} screen="board" />;
 }

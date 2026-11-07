@@ -41,7 +41,7 @@ export async function runIdempotent<T>(
       return schema.parse(row.result);
     }
     const result = schema.parse(await work(tx));
-    await tx.insert(mutationRequests).values({ ...identity, userId: request.userId, result });
+    await tx.insert(mutationRequests).values({ ...identity, userId: request.userId, result, createdAt: new Date().toISOString() });
     return result;
   });
 }

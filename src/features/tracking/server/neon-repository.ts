@@ -35,13 +35,13 @@ export class NeonTrackingRepository implements TrackingRepository {
     return (await this.db.select().from(progressUpdates).where(eq(progressUpdates.taskId, taskId)).orderBy(asc(progressUpdates.createdAt), asc(progressUpdates.id))).map(toProgressUpdate);
   }
   async insertMessage(message: Message) {
-    await this.db.insert(messages).values({ ...message, createdAt: new Date(message.createdAt) });
+    await this.db.insert(messages).values({ ...message, createdAt: typeof message.createdAt === "string" ? message.createdAt : new Date(message.createdAt).toISOString() });
   }
   async commitProgressUpdate(message: Message, update: ProgressUpdate, task: Task, expectedVersion: number) {
     const [changed] = await this.db.update(tasks).set({ status: task.status, version: sql`${tasks.version} + 1` })
       .where(and(eq(tasks.id, task.id), eq(tasks.projectId, task.projectId), eq(tasks.version, expectedVersion))).returning({ id: tasks.id });
     if (!changed) throw new ApiError(409, "VERSION_CONFLICT", "Công việc đã thay đổi. Hãy tải lại trước khi xác nhận.");
-    await this.db.insert(progressUpdates).values({ ...update, createdAt: new Date(update.createdAt) });
+    await this.db.insert(progressUpdates).values({ ...update, createdAt: typeof update.createdAt === "string" ? update.createdAt : new Date(update.createdAt).toISOString() });
     await this.db.update(messages).set({ taskId: message.taskId, resolution: message.resolution, clarificationQuestion: message.clarificationQuestion, candidateTaskIds: message.candidateTaskIds })
       .where(eq(messages.id, message.id));
   }

@@ -1,5 +1,7 @@
 # TeamFlow AI
 
+> Cập nhật TV2: đã triển khai schema/migration, session/quyền, API tracking và UI P02/P05/P06 shell/P07. Xem [bàn giao TV2](docs/TV2_HANDOFF.md) để cấu hình và nối TV1/TV3. Neon thật và vòng tích hợp toàn nhóm chưa được kiểm chứng; các mục scaffold bên dưới mô tả nền ban đầu.
+
 Dự án nhóm TV1/TV2/TV3 tham gia **DevDay Exchange Community: Da Nang City**, hỗ trợ nhóm nhỏ (3–8 người) lập kế hoạch, theo dõi và nghiệm thu công việc bằng ba trợ lý AI.
 
 ---

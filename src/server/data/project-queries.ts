@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq, inArray, isNotNull } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { getDb } from "@/server/db/client";
 import { plans, projectMembers, projects, tasks, users } from "@/server/db/schema";
 import { toProject, toUser } from "@/server/db/mappers";
@@ -35,5 +35,5 @@ export async function listProjectMembers(session: Session, projectId: string) {
   return getDb().select().from(projectMembers).where(eq(projectMembers.projectId, projectId));
 }
 export async function listDemoUsers() {
-  return (await getDb().select().from(users).where(isNotNull(users.demoAccount))).map(toUser);
+  return (await getDb().select().from(users).where(inArray(users.id, ["demo-tv1", "demo-tv2", "demo-tv3"]))).map(toUser);
 }

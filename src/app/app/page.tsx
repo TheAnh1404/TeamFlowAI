@@ -1,4 +1,6 @@
-import { ProjectsPage } from "@/features/tracking";
+import { ProjectsEntry } from "@/features/tracking/server/projects-entry";
 
-// P02: TV2 session and project read model. Project creation remains TV1.
-export default function Page() { return <ProjectsPage />; }
+// P02 — TODO(TV1): project list. Session infrastructure remains TV2-owned.
+export default function ProjectsPage() {
+  return <ProjectsEntry />;
+}

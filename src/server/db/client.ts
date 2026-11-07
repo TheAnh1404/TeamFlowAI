@@ -13,13 +13,15 @@ function createDb() {
 }
 
 export type Database = ReturnType<typeof createDb>;
+export type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
+export type DataConnection = Database | Transaction;
+export type DatabaseTransaction = Transaction;
+export type DatabaseReader = DataConnection;
+
 let database: Database | undefined;
 
-// Server repositories only; no connection or environment access at import time.
+// Server repositories only; no connection or environment access at import/build time.
 export function getDb(): Database {
   database ??= createDb();
   return database;
 }
-
-export type DatabaseTransaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
-export type DatabaseReader = Database | DatabaseTransaction;

@@ -2,115 +2,155 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { and, eq } from "drizzle-orm";
-import { messageSchema, progressUpdateSchema, taskSchema, type Message, type MutationOptions, type ProgressMessageResult, type ProgressUpdate, type ResolveTaskReferenceInput, type SubmitProgressMessageInput, type Task } from "@/contracts";
+import {
+  messageSchema,
+  progressUpdateSchema,
+  taskSchema,
+  submitProgressMessageInputSchema,
+  resolveTaskReferenceInputSchema,
+  type Message,
+  type ProgressMessageResult,
+  type Task,
+  type ProjectMember,
+} from "@/contracts";
+import { getDb, type Database, type Transaction } from "@/server/db/client";
+import { messages, tasks, progressUpdates } from "@/server/db/schema";
+import { projectMember, taskWithMember, assertUpdater } from "@/server/auth/access";
 import type { Session } from "@/server/auth/contracts";
-import { requireMembership } from "@/server/auth";
-import { getDb, type DatabaseReader, type DatabaseTransaction } from "@/server/db/client";
-import { messages } from "@/server/db/schema";
-import { findMutationResult, runIdempotent, requireMutationKey, type MutationRequest } from "@/server/db/idempotency";
-import { ApiError } from "@/server/http/api-error";
-import { analyzeProgress } from "./coordinator";
-import { canUpdateTask, decideProgress, supportsChatProgress } from "./policy";
-import { NeonTrackingRepository } from "./neon-repository";
+import { assert, conflict, notFound } from "@/server/http/errors";
+import { commitMutation, mutationIdentity, replay } from "@/server/db/mutations";
+import { createCoordinator, type Coordinator } from "./coordinator";
+import { trackingReader } from "./store";
 import type { TrackingService } from "./service";
 
 export const progressMessageResultSchema = z.object({
-  message: messageSchema, progressUpdate: progressUpdateSchema.nullable(), task: taskSchema.nullable(),
+  message: messageSchema,
+  progressUpdate: progressUpdateSchema.nullable(),
+  task: taskSchema.nullable(),
 });
 
-async function taskForSession(db: DatabaseReader, session: Session, taskId: string) {
-  const task = await new NeonTrackingRepository(db).getTask(taskId);
-  if (!task) throw new ApiError(404, "NOT_FOUND", "Không tìm thấy công việc đã công bố.");
-  const member = await requireMembership(db, session, task.projectId);
-  return { task, member };
+const mutable = (task: Task) => ["todo", "in_progress", "blocked"].includes(task.status);
+const canUpdate = (member: ProjectMember, task: Task) => member.role === "leader" || task.assigneeMemberId === member.id;
+
+export function createTrackingService(db: Database, coordinator: Coordinator = createCoordinator()): TrackingService {
+  const reader = trackingReader(db);
+  return {
+    async listTasks(session, projectId) {
+      await projectMember(db, session, projectId);
+      return reader.listTasks(projectId);
+    },
+    async getTask(session, id) {
+      return (await taskWithMember(db, session, id)).task;
+    },
+    async listMessages(session, projectId) {
+      await projectMember(db, session, projectId);
+      return reader.listMessages(projectId);
+    },
+    async listProgressUpdates(session, id) {
+      await taskWithMember(db, session, id);
+      return reader.listProgressUpdates(id);
+    },
+    async submitProgressMessage(session, projectId, rawInput, options) {
+      const input = submitProgressMessageInputSchema.parse(rawInput);
+      await projectMember(db, session, projectId);
+      const identity = mutationIdentity(session.user.id, `POST /api/projects/${projectId}/messages`, options.idempotencyKey, input);
+      const saved = await replay<ProgressMessageResult>(db, identity);
+      if (saved !== undefined) return saved;
+      const availableTasks = await reader.listTasks(projectId);
+      if (input.taskId) assert(availableTasks.some((t) => t.id === input.taskId), 422, "VALIDATION_ERROR", "Công việc không thuộc kế hoạch đã công bố của dự án.");
+      const result = await coordinator({ message: { content: input.content, taskId: input.taskId ?? null }, tasks: availableTasks });
+      const proposal = result.proposal;
+      const target = availableTasks.find((t) => t.id === proposal.taskId);
+      assert(!proposal.taskId || target, 502, "AI_INVALID_OUTPUT", "Coordinator tham chiếu công việc không hợp lệ.");
+      const ambiguous =
+        proposal.intent === "clarify" ||
+        (proposal.intent === "update" && (!target || !proposal.requestedStatus || (input.taskId && input.taskId !== target.id) || (proposal.requestedStatus === "blocked" && !proposal.blocker?.trim())));
+      return commitMutation(db, identity, async (tx) => {
+        const actor = await projectMember(tx, session, projectId);
+        const message: Message = {
+          id: randomUUID(),
+          projectId,
+          authorMemberId: actor.id,
+          content: input.content,
+          taskId: ambiguous ? null : target?.id ?? input.taskId ?? null,
+          candidateTaskIds: ambiguous ? availableTasks.filter((t) => canUpdate(actor, t) && mutable(t)).map((t) => t.id) : [],
+          resolution: ambiguous ? "clarification_required" : "no_change",
+          clarificationQuestion: ambiguous ? proposal.clarificationQuestion ?? "Chọn công việc, trạng thái muốn cập nhật và mô tả trở ngại nếu có." : null,
+          aiMode: result.aiMode,
+          createdAt: new Date().toISOString(),
+        };
+        if (!ambiguous && proposal.intent === "update" && target && canUpdate(actor, target) && mutable(target)) {
+          const current = await lockTask(tx, session, target.id);
+          if (current.task.version !== target.version) throw conflict();
+          assertUpdater(current.member, current.task);
+          assert(mutable(current.task), 409, "INVALID_TRANSITION", "Trạng thái hiện tại cần đi qua nộp bài/review.");
+          return apply(tx, message, current.task, proposal.requestedStatus!, proposal.blocker ?? null, true);
+        }
+        await tx.insert(messages).values(message);
+        return { message, progressUpdate: null, task: null };
+      });
+    },
+    async resolveTaskReference(session, messageId, rawInput, options) {
+      const input = resolveTaskReferenceInputSchema.parse(rawInput);
+      const message = await reader.getMessage(messageId);
+      if (!message) throw notFound();
+      const member = await projectMember(db, session, message.projectId);
+      assert(member.id === message.authorMemberId, 403, "FORBIDDEN", "Chỉ tác giả được làm rõ tin nhắn.");
+      const access = await taskWithMember(db, session, input.taskId);
+      assert(access.task.projectId === message.projectId, 422, "VALIDATION_ERROR", "Công việc không cùng dự án.");
+      assertUpdater(access.member, access.task);
+      const identity = mutationIdentity(session.user.id, `POST /api/messages/${messageId}/resolve`, options.idempotencyKey, input);
+      return commitMutation(db, identity, async (tx) => {
+        // A per-message lock serializes two different keys resolving the same message.
+        const [current] = await tx.select().from(messages).where(eq(messages.id, messageId)).for("update");
+        const actor = await projectMember(tx, session, current.projectId);
+        assert(actor.id === current.authorMemberId, 403, "FORBIDDEN", "Chỉ tác giả được làm rõ tin nhắn.");
+        assert(current.resolution === "clarification_required", 409, "INVALID_TRANSITION", "Tin nhắn đã được xử lý; hãy tải lại lịch sử chat.");
+        const { task, member: updater } = await lockTask(tx, session, input.taskId);
+        assert(task.projectId === current.projectId, 422, "VALIDATION_ERROR", "Công việc không cùng dự án.");
+        assertUpdater(updater, task);
+        if (task.version !== input.expectedTaskVersion) throw conflict();
+        assert(mutable(task), 409, "INVALID_TRANSITION", "Công việc đang review hoặc đã hoàn thành; hãy dùng luồng nộp bài.");
+        return apply(tx, current, task, input.requestedStatus, input.blocker ?? null, false);
+      });
+    },
+  };
 }
 
-function requestFor(session: Session, operation: string, input: unknown, options: MutationOptions): MutationRequest {
-  return { userId: session.user.id, operation, key: requireMutationKey(options.idempotencyKey), input };
+async function lockTask(tx: Transaction, session: Session, id: string) {
+  const [task] = await tx.select().from(tasks).where(eq(tasks.id, id)).for("update");
+  if (!task) throw notFound();
+  return { task, member: await projectMember(tx, session, task.projectId) };
 }
-function progressRecord(message: Message, task: Task, status: "in_progress" | "blocked", blocker: string | null): ProgressUpdate {
-  return { id: randomUUID(), projectId: task.projectId, taskId: task.id, messageId: message.id, authorMemberId: message.authorMemberId, statusBefore: task.status, statusAfter: status, note: message.content, blocker, createdAt: new Date().toISOString() };
-}
-async function verifyResolve(db: DatabaseReader, session: Session, messageId: string, taskId: string) {
-  const repo = new NeonTrackingRepository(db);
-  const message = await repo.getMessage(messageId);
-  if (!message) throw new ApiError(404, "NOT_FOUND", "Không tìm thấy tin nhắn.");
-  const member = await requireMembership(db, session, message.projectId);
-  const task = await repo.getTask(taskId);
-  if (!task || task.projectId !== message.projectId) throw new ApiError(422, "VALIDATION_ERROR", "Công việc không thuộc dự án của tin nhắn.");
-  if (message.authorMemberId !== member.id || !canUpdateTask(member, task)) throw new ApiError(403, "FORBIDDEN", "Bạn không có quyền xác nhận cập nhật này.");
-  return { message, task, member };
+
+async function apply(tx: Transaction, original: Message, task: Task, status: "in_progress" | "blocked", blocker: string | null, insert: boolean): Promise<ProgressMessageResult> {
+  assert(status !== "blocked" || blocker?.trim(), 422, "VALIDATION_ERROR", "Cần mô tả trở ngại.");
+  const message: Message = { ...original, taskId: task.id, resolution: "applied", candidateTaskIds: [], clarificationQuestion: null };
+  const progressUpdate = {
+    id: randomUUID(),
+    projectId: task.projectId,
+    taskId: task.id,
+    messageId: message.id,
+    authorMemberId: message.authorMemberId,
+    statusBefore: task.status,
+    statusAfter: status,
+    note: message.content,
+    blocker: status === "blocked" ? blocker : null,
+    createdAt: new Date().toISOString(),
+  };
+  if (insert) await tx.insert(messages).values(message);
+  else await tx.update(messages).set(message).where(eq(messages.id, message.id));
+  const [updated] = await tx.update(tasks).set({ status, version: task.version + 1 }).where(and(eq(tasks.id, task.id), eq(tasks.version, task.version))).returning();
+  if (!updated) throw conflict();
+  await tx.insert(progressUpdates).values(progressUpdate);
+  return { message, progressUpdate, task: updated };
 }
 
 export const trackingService: TrackingService = {
-  async listTasks(session, projectId) {
-    await requireMembership(getDb(), session, projectId);
-    return new NeonTrackingRepository(getDb()).listTasks(projectId);
-  },
-  async getTask(session, taskId) {
-    return (await taskForSession(getDb(), session, taskId)).task;
-  },
-  async listMessages(session, projectId) {
-    await requireMembership(getDb(), session, projectId);
-    return new NeonTrackingRepository(getDb()).listMessages(projectId);
-  },
-  async listProgressUpdates(session, taskId) {
-    await taskForSession(getDb(), session, taskId);
-    return new NeonTrackingRepository(getDb()).listProgressUpdates(taskId);
-  },
-  async submitProgressMessage(session: Session, projectId: string, input: SubmitProgressMessageInput, options: MutationOptions): Promise<ProgressMessageResult> {
-    await requireMembership(getDb(), session, projectId);
-    const request = requestFor(session, "POST /api/projects/" + projectId + "/messages", input, options);
-    const replay = await findMutationResult(request, progressMessageResultSchema);
-    if (replay) return replay;
-    const snapshot = await new NeonTrackingRepository(getDb()).listTasks(projectId);
-    if (input.taskId && !snapshot.some(task => task.id === input.taskId)) throw new ApiError(422, "VALIDATION_ERROR", "Công việc không thuộc danh sách đã công bố của dự án.");
-    const contextTasks = input.taskId ? snapshot.filter(task => task.id === input.taskId) : snapshot;
-    if (contextTasks.length > 100) throw new ApiError(422, "VALIDATION_ERROR", "Hãy chọn một công việc trước khi gửi cập nhật.");
-    const analysis = await analyzeProgress({ message: { content: input.content, taskId: input.taskId ?? null }, tasks: contextTasks });
-    const authorize = async (tx: DatabaseTransaction) => { await requireMembership(tx, session, projectId); };
-    return runIdempotent(request, progressMessageResultSchema, authorize, async tx => {
-      const member = await requireMembership(tx, session, projectId);
-      const repo = new NeonTrackingRepository(tx);
-      const current = await repo.listTasks(projectId);
-      const decision = decideProgress({ member, tasks: current, selectedTaskId: input.taskId, content: input.content, proposal: analysis.proposal });
-      const message: Message = {
-        id: randomUUID(), projectId, authorMemberId: member.id, content: input.content,
-        taskId: decision.taskId, candidateTaskIds: decision.candidateTaskIds,
-        resolution: decision.resolution, clarificationQuestion: decision.question,
-        aiMode: analysis.aiMode, createdAt: new Date().toISOString(),
-      };
-      await repo.insertMessage(message);
-      if (decision.resolution !== "applied" || !decision.requestedStatus) return { message, progressUpdate: null, task: null };
-      const task = current.find(item => item.id === decision.taskId);
-      const prior = snapshot.find(item => item.id === decision.taskId);
-      if (!task || !prior || task.version !== prior.version) throw new ApiError(409, "VERSION_CONFLICT", "Công việc đã thay đổi trong lúc xử lý. Hãy tải lại.");
-      const nextTask: Task = { ...task, status: decision.requestedStatus, version: task.version + 1 };
-      const update = progressRecord(message, task, decision.requestedStatus, decision.blocker);
-      await repo.commitProgressUpdate(message, update, nextTask, task.version);
-      return { message, progressUpdate: update, task: nextTask };
-    });
-  },
-  async resolveTaskReference(session: Session, messageId: string, input: ResolveTaskReferenceInput, options: MutationOptions): Promise<ProgressMessageResult> {
-    await verifyResolve(getDb(), session, messageId, input.taskId);
-    const request = requestFor(session, "POST /api/messages/" + messageId + "/resolve", input, options);
-    return runIdempotent(request, progressMessageResultSchema, async tx => {
-      await verifyResolve(tx, session, messageId, input.taskId);
-    }, async tx => {
-      // Serialize confirmations with different keys for the same source message.
-      await tx.select({ id: messages.id }).from(messages).where(and(eq(messages.id, messageId))).for("update");
-      const { message, task } = await verifyResolve(tx, session, messageId, input.taskId);
-      if (message.resolution !== "clarification_required") throw new ApiError(409, "INVALID_TRANSITION", "Tin nhắn đã được xử lý; không thể cập nhật lần nữa.");
-      if (!supportsChatProgress(task.status)) throw new ApiError(409, "INVALID_TRANSITION", "Trạng thái hiện tại cần luồng nộp bài hoặc nghiệm thu.");
-      if (task.version !== input.expectedTaskVersion) throw new ApiError(409, "VERSION_CONFLICT", "Công việc đã thay đổi. Hãy tải lại trước khi xác nhận.");
-      const blocker = input.requestedStatus === "blocked" ? input.blocker?.trim() : null;
-      if (input.requestedStatus === "blocked" && !blocker) throw new ApiError(422, "VALIDATION_ERROR", "Cần mô tả trở ngại cụ thể.");
-      const resolved: Message = { ...message, taskId: task.id, resolution: "applied", clarificationQuestion: null, candidateTaskIds: [] };
-      const nextTask: Task = { ...task, status: input.requestedStatus, version: task.version + 1 };
-      const update = progressRecord(resolved, task, input.requestedStatus, blocker || null);
-      if (blocker) update.note = message.content + "\nTrở ngại được tác giả xác nhận: " + blocker;
-      await new NeonTrackingRepository(tx).commitProgressUpdate(resolved, update, nextTask, input.expectedTaskVersion);
-      return { message: resolved, progressUpdate: update, task: nextTask };
-    });
-  },
+  listTasks: (...a) => createTrackingService(getDb()).listTasks(...a),
+  getTask: (...a) => createTrackingService(getDb()).getTask(...a),
+  listMessages: (...a) => createTrackingService(getDb()).listMessages(...a),
+  listProgressUpdates: (...a) => createTrackingService(getDb()).listProgressUpdates(...a),
+  submitProgressMessage: (...a) => createTrackingService(getDb()).submitProgressMessage(...a),
+  resolveTaskReference: (...a) => createTrackingService(getDb()).resolveTaskReference(...a),
 };

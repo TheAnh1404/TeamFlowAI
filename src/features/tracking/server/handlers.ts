@@ -1,5 +1,4 @@
 import "server-only";
-import { z } from "zod";
 import { createDemoSessionInputSchema, resolveTaskReferenceInputSchema, submitProgressMessageInputSchema } from "@/contracts";
 import { requireSession } from "@/server/auth";
 import { createDemoSession, endDemoSession } from "@/server/auth/demo-session";
@@ -11,15 +10,8 @@ import { trackingService } from "./implementation";
 type ProjectContext = { params: Promise<{ projectId: string }> };
 type TaskContext = { params: Promise<{ taskId: string }> };
 type MessageContext = { params: Promise<{ messageId: string }> };
-const messageInput = submitProgressMessageInputSchema.extend({
-  content: z.string().trim().min(1).max(5000),
-  taskId: z.string().min(1).max(200).optional(),
-}).strict();
-const resolveInput = resolveTaskReferenceInputSchema.extend({
-  taskId: z.string().min(1).max(200),
-  blocker: z.string().trim().max(5000).optional(),
-  expectedTaskVersion: z.number().int().positive(),
-}).strict();
+const messageInput = submitProgressMessageInputSchema;
+const resolveInput = resolveTaskReferenceInputSchema;
 
 export const getSession = () => apiHandler(requireSession);
 export const postSession = (request: Request) => apiHandler(async () => {

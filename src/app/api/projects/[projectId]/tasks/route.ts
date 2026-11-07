@@ -1,4 +1,11 @@
-import { getTasks as GET } from "@/features/tracking/server/handlers";
-
 export const runtime = "nodejs";
-export { GET };
+
+import { requireSession } from "@/server/auth";
+import { endpoint } from "@/server/http/errors";
+import { trackingService } from "@/features/tracking/server/implementation";
+
+export const GET = (_request: Request, context: { params: Promise<{ projectId: string }> }) =>
+  endpoint(async () => {
+    const session = await requireSession();
+    return trackingService.listTasks(session, (await context.params).projectId);
+  });

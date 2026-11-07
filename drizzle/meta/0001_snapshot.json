@@ -1,0 +1,1389 @@
+{
+  "id": "d580baa1-40ee-4be8-8f40-872865e00a26",
+  "prevId": "cf3c1be8-90b7-4e95-8b85-670ba742e2ae",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.messages": {
+      "name": "messages",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "projectId": {
+          "name": "projectId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "authorMemberId": {
+          "name": "authorMemberId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "content": {
+          "name": "content",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "taskId": {
+          "name": "taskId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "candidateTaskIds": {
+          "name": "candidateTaskIds",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "resolution": {
+          "name": "resolution",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "clarificationQuestion": {
+          "name": "clarificationQuestion",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "aiMode": {
+          "name": "aiMode",
+          "type": "ai_mode",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "messages_project_created": {
+          "name": "messages_project_created",
+          "columns": [
+            {
+              "expression": "projectId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "createdAt",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "messages_projectId_projects_id_fk": {
+          "name": "messages_projectId_projects_id_fk",
+          "tableFrom": "messages",
+          "tableTo": "projects",
+          "columnsFrom": [
+            "projectId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "messages_authorMemberId_projectId_project_members_id_projectId_fk": {
+          "name": "messages_authorMemberId_projectId_project_members_id_projectId_fk",
+          "tableFrom": "messages",
+          "tableTo": "project_members",
+          "columnsFrom": [
+            "authorMemberId",
+            "projectId"
+          ],
+          "columnsTo": [
+            "id",
+            "projectId"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "messages_taskId_projectId_tasks_id_projectId_fk": {
+          "name": "messages_taskId_projectId_tasks_id_projectId_fk",
+          "tableFrom": "messages",
+          "tableTo": "tasks",
+          "columnsFrom": [
+            "taskId",
+            "projectId"
+          ],
+          "columnsTo": [
+            "id",
+            "projectId"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "messages_id_projectId_unique": {
+          "name": "messages_id_projectId_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "id",
+            "projectId"
+          ]
+        },
+        "messages_id_taskId_projectId_unique": {
+          "name": "messages_id_taskId_projectId_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "id",
+            "taskId",
+            "projectId"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "clarification_has_question": {
+          "name": "clarification_has_question",
+          "value": "\"messages\".\"resolution\" <> 'clarification_required' OR (\"messages\".\"clarificationQuestion\" IS NOT NULL AND length(trim(\"messages\".\"clarificationQuestion\")) > 0)"
+        },
+        "message_resolution_valid": {
+          "name": "message_resolution_valid",
+          "value": "\"messages\".\"resolution\" IN ('clarification_required','applied','no_change')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.mutation_results": {
+      "name": "mutation_results",
+      "schema": "",
+      "columns": {
+        "scope": {
+          "name": "scope",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "userId": {
+          "name": "userId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fingerprint": {
+          "name": "fingerprint",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "result": {
+          "name": "result",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "mutation_results_userId_users_id_fk": {
+          "name": "mutation_results_userId_users_id_fk",
+          "tableFrom": "mutation_results",
+          "tableTo": "users",
+          "columnsFrom": [
+            "userId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.plans": {
+      "name": "plans",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "projectId": {
+          "name": "projectId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "draftTasks": {
+          "name": "draftTasks",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "aiMode": {
+          "name": "aiMode",
+          "type": "ai_mode",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "approvedByMemberId": {
+          "name": "approvedByMemberId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "publishedAt": {
+          "name": "publishedAt",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "plans_projectId_projects_id_fk": {
+          "name": "plans_projectId_projects_id_fk",
+          "tableFrom": "plans",
+          "tableTo": "projects",
+          "columnsFrom": [
+            "projectId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "plans_approvedByMemberId_projectId_project_members_id_projectId_fk": {
+          "name": "plans_approvedByMemberId_projectId_project_members_id_projectId_fk",
+          "tableFrom": "plans",
+          "tableTo": "project_members",
+          "columnsFrom": [
+            "approvedByMemberId",
+            "projectId"
+          ],
+          "columnsTo": [
+            "id",
+            "projectId"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "plans_projectId_unique": {
+          "name": "plans_projectId_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "projectId"
+          ]
+        },
+        "plans_id_projectId_unique": {
+          "name": "plans_id_projectId_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "id",
+            "projectId"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "plan_version_positive": {
+          "name": "plan_version_positive",
+          "value": "\"plans\".\"version\" > 0"
+        },
+        "plan_publication_consistent": {
+          "name": "plan_publication_consistent",
+          "value": "(\"plans\".\"status\" = 'draft' AND \"plans\".\"approvedByMemberId\" IS NULL AND \"plans\".\"publishedAt\" IS NULL) OR (\"plans\".\"status\" = 'published' AND \"plans\".\"approvedByMemberId\" IS NOT NULL AND \"plans\".\"publishedAt\" IS NOT NULL)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.progress_updates": {
+      "name": "progress_updates",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "projectId": {
+          "name": "projectId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "taskId": {
+          "name": "taskId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "messageId": {
+          "name": "messageId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "authorMemberId": {
+          "name": "authorMemberId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "statusBefore": {
+          "name": "statusBefore",
+          "type": "task_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "statusAfter": {
+          "name": "statusAfter",
+          "type": "task_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "blocker": {
+          "name": "blocker",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "progress_task_created": {
+          "name": "progress_task_created",
+          "columns": [
+            {
+              "expression": "taskId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "createdAt",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "progress_updates_projectId_projects_id_fk": {
+          "name": "progress_updates_projectId_projects_id_fk",
+          "tableFrom": "progress_updates",
+          "tableTo": "projects",
+          "columnsFrom": [
+            "projectId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "progress_updates_taskId_projectId_tasks_id_projectId_fk": {
+          "name": "progress_updates_taskId_projectId_tasks_id_projectId_fk",
+          "tableFrom": "progress_updates",
+          "tableTo": "tasks",
+          "columnsFrom": [
+            "taskId",
+            "projectId"
+          ],
+          "columnsTo": [
+            "id",
+            "projectId"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "progress_updates_messageId_taskId_projectId_messages_id_taskId_projectId_fk": {
+          "name": "progress_updates_messageId_taskId_projectId_messages_id_taskId_projectId_fk",
+          "tableFrom": "progress_updates",
+          "tableTo": "messages",
+          "columnsFrom": [
+            "messageId",
+            "taskId",
+            "projectId"
+          ],
+          "columnsTo": [
+            "id",
+            "taskId",
+            "projectId"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "progress_updates_authorMemberId_projectId_project_members_id_projectId_fk": {
+          "name": "progress_updates_authorMemberId_projectId_project_members_id_projectId_fk",
+          "tableFrom": "progress_updates",
+          "tableTo": "project_members",
+          "columnsFrom": [
+            "authorMemberId",
+            "projectId"
+          ],
+          "columnsTo": [
+            "id",
+            "projectId"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "progress_updates_messageId_unique": {
+          "name": "progress_updates_messageId_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "messageId"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "progress_allowed_transition": {
+          "name": "progress_allowed_transition",
+          "value": "\"progress_updates\".\"statusBefore\" IN ('todo','in_progress','blocked') AND \"progress_updates\".\"statusAfter\" IN ('in_progress','blocked')"
+        },
+        "blocked_requires_reason": {
+          "name": "blocked_requires_reason",
+          "value": "\"progress_updates\".\"statusAfter\" <> 'blocked' OR (\"progress_updates\".\"blocker\" IS NOT NULL AND length(trim(\"progress_updates\".\"blocker\")) > 0)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.project_members": {
+      "name": "project_members",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "projectId": {
+          "name": "projectId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "userId": {
+          "name": "userId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role": {
+          "name": "role",
+          "type": "project_role",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "canAccept": {
+          "name": "canAccept",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "skills": {
+          "name": "skills",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "availableHoursPerWeek": {
+          "name": "availableHoursPerWeek",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "one_leader_per_project": {
+          "name": "one_leader_per_project",
+          "columns": [
+            {
+              "expression": "projectId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"project_members\".\"role\" = 'leader'",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "project_members_projectId_projects_id_fk": {
+          "name": "project_members_projectId_projects_id_fk",
+          "tableFrom": "project_members",
+          "tableTo": "projects",
+          "columnsFrom": [
+            "projectId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "project_members_userId_users_id_fk": {
+          "name": "project_members_userId_users_id_fk",
+          "tableFrom": "project_members",
+          "tableTo": "users",
+          "columnsFrom": [
+            "userId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "project_members_projectId_userId_unique": {
+          "name": "project_members_projectId_userId_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "projectId",
+            "userId"
+          ]
+        },
+        "project_members_id_projectId_unique": {
+          "name": "project_members_id_projectId_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "id",
+            "projectId"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "nonnegative_hours": {
+          "name": "nonnegative_hours",
+          "value": "\"project_members\".\"availableHoursPerWeek\" >= 0"
+        },
+        "leader_can_accept": {
+          "name": "leader_can_accept",
+          "value": "\"project_members\".\"role\" <> 'leader' OR \"project_members\".\"canAccept\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.projects": {
+      "name": "projects",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "goal": {
+          "name": "goal",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "deliverables": {
+          "name": "deliverables",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "deadline": {
+          "name": "deadline",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "timeZone": {
+          "name": "timeZone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'Asia/Ho_Chi_Minh'"
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.reviews": {
+      "name": "reviews",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "projectId": {
+          "name": "projectId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "taskId": {
+          "name": "taskId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "submissionId": {
+          "name": "submissionId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "results": {
+          "name": "results",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "summary": {
+          "name": "summary",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "aiMode": {
+          "name": "aiMode",
+          "type": "ai_mode",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "reviews_projectId_projects_id_fk": {
+          "name": "reviews_projectId_projects_id_fk",
+          "tableFrom": "reviews",
+          "tableTo": "projects",
+          "columnsFrom": [
+            "projectId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "reviews_submissionId_taskId_projectId_submissions_id_taskId_projectId_fk": {
+          "name": "reviews_submissionId_taskId_projectId_submissions_id_taskId_projectId_fk",
+          "tableFrom": "reviews",
+          "tableTo": "submissions",
+          "columnsFrom": [
+            "submissionId",
+            "taskId",
+            "projectId"
+          ],
+          "columnsTo": [
+            "id",
+            "taskId",
+            "projectId"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "reviews_submissionId_unique": {
+          "name": "reviews_submissionId_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "submissionId"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.sessions": {
+      "name": "sessions",
+      "schema": "",
+      "columns": {
+        "tokenHash": {
+          "name": "tokenHash",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "userId": {
+          "name": "userId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expiresAt": {
+          "name": "expiresAt",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "sessions_userId_users_id_fk": {
+          "name": "sessions_userId_users_id_fk",
+          "tableFrom": "sessions",
+          "tableTo": "users",
+          "columnsFrom": [
+            "userId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.submissions": {
+      "name": "submissions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "projectId": {
+          "name": "projectId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "taskId": {
+          "name": "taskId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "authorMemberId": {
+          "name": "authorMemberId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "revision": {
+          "name": "revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "contentType": {
+          "name": "contentType",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "content": {
+          "name": "content",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "criteriaSnapshot": {
+          "name": "criteriaSnapshot",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "submittedAt": {
+          "name": "submittedAt",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "submissions_projectId_projects_id_fk": {
+          "name": "submissions_projectId_projects_id_fk",
+          "tableFrom": "submissions",
+          "tableTo": "projects",
+          "columnsFrom": [
+            "projectId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "submissions_taskId_projectId_tasks_id_projectId_fk": {
+          "name": "submissions_taskId_projectId_tasks_id_projectId_fk",
+          "tableFrom": "submissions",
+          "tableTo": "tasks",
+          "columnsFrom": [
+            "taskId",
+            "projectId"
+          ],
+          "columnsTo": [
+            "id",
+            "projectId"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "submissions_authorMemberId_projectId_project_members_id_projectId_fk": {
+          "name": "submissions_authorMemberId_projectId_project_members_id_projectId_fk",
+          "tableFrom": "submissions",
+          "tableTo": "project_members",
+          "columnsFrom": [
+            "authorMemberId",
+            "projectId"
+          ],
+          "columnsTo": [
+            "id",
+            "projectId"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "submissions_taskId_revision_unique": {
+          "name": "submissions_taskId_revision_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "taskId",
+            "revision"
+          ]
+        },
+        "submissions_id_taskId_projectId_unique": {
+          "name": "submissions_id_taskId_projectId_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "id",
+            "taskId",
+            "projectId"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "revision_positive": {
+          "name": "revision_positive",
+          "value": "\"submissions\".\"revision\" > 0"
+        },
+        "submission_content_type_valid": {
+          "name": "submission_content_type_valid",
+          "value": "\"submissions\".\"contentType\" IN ('text','markdown','code')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.tasks": {
+      "name": "tasks",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "projectId": {
+          "name": "projectId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "planId": {
+          "name": "planId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "assigneeMemberId": {
+          "name": "assigneeMemberId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "deadline": {
+          "name": "deadline",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "criteria": {
+          "name": "criteria",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "dependencyTaskIds": {
+          "name": "dependencyTaskIds",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "task_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'todo'"
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "acceptedSubmissionId": {
+          "name": "acceptedSubmissionId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "acceptedByMemberId": {
+          "name": "acceptedByMemberId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "acceptedAt": {
+          "name": "acceptedAt",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "tasks_project_status": {
+          "name": "tasks_project_status",
+          "columns": [
+            {
+              "expression": "projectId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "tasks_projectId_projects_id_fk": {
+          "name": "tasks_projectId_projects_id_fk",
+          "tableFrom": "tasks",
+          "tableTo": "projects",
+          "columnsFrom": [
+            "projectId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "tasks_planId_projectId_plans_id_projectId_fk": {
+          "name": "tasks_planId_projectId_plans_id_projectId_fk",
+          "tableFrom": "tasks",
+          "tableTo": "plans",
+          "columnsFrom": [
+            "planId",
+            "projectId"
+          ],
+          "columnsTo": [
+            "id",
+            "projectId"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "tasks_assigneeMemberId_projectId_project_members_id_projectId_fk": {
+          "name": "tasks_assigneeMemberId_projectId_project_members_id_projectId_fk",
+          "tableFrom": "tasks",
+          "tableTo": "project_members",
+          "columnsFrom": [
+            "assigneeMemberId",
+            "projectId"
+          ],
+          "columnsTo": [
+            "id",
+            "projectId"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "tasks_acceptedByMemberId_projectId_project_members_id_projectId_fk": {
+          "name": "tasks_acceptedByMemberId_projectId_project_members_id_projectId_fk",
+          "tableFrom": "tasks",
+          "tableTo": "project_members",
+          "columnsFrom": [
+            "acceptedByMemberId",
+            "projectId"
+          ],
+          "columnsTo": [
+            "id",
+            "projectId"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "tasks_id_projectId_unique": {
+          "name": "tasks_id_projectId_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "id",
+            "projectId"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "task_version_positive": {
+          "name": "task_version_positive",
+          "value": "\"tasks\".\"version\" > 0"
+        },
+        "task_has_criteria": {
+          "name": "task_has_criteria",
+          "value": "jsonb_array_length(\"tasks\".\"criteria\") > 0"
+        },
+        "task_acceptance_consistent": {
+          "name": "task_acceptance_consistent",
+          "value": "(\"tasks\".\"status\" = 'done' AND \"tasks\".\"acceptedSubmissionId\" IS NOT NULL AND \"tasks\".\"acceptedByMemberId\" IS NOT NULL AND \"tasks\".\"acceptedAt\" IS NOT NULL) OR (\"tasks\".\"status\" <> 'done' AND \"tasks\".\"acceptedSubmissionId\" IS NULL AND \"tasks\".\"acceptedByMemberId\" IS NULL AND \"tasks\".\"acceptedAt\" IS NULL)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.users": {
+      "name": "users",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "displayName": {
+          "name": "displayName",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.weekly_reports": {
+      "name": "weekly_reports",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "projectId": {
+          "name": "projectId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "generatedByMemberId": {
+          "name": "generatedByMemberId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "periodStart": {
+          "name": "periodStart",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "periodEnd": {
+          "name": "periodEnd",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "asOf": {
+          "name": "asOf",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "metrics": {
+          "name": "metrics",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sourceRefs": {
+          "name": "sourceRefs",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "summary": {
+          "name": "summary",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "aiMode": {
+          "name": "aiMode",
+          "type": "ai_mode",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "weekly_reports_projectId_projects_id_fk": {
+          "name": "weekly_reports_projectId_projects_id_fk",
+          "tableFrom": "weekly_reports",
+          "tableTo": "projects",
+          "columnsFrom": [
+            "projectId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "weekly_reports_generatedByMemberId_projectId_project_members_id_projectId_fk": {
+          "name": "weekly_reports_generatedByMemberId_projectId_project_members_id_projectId_fk",
+          "tableFrom": "weekly_reports",
+          "tableTo": "project_members",
+          "columnsFrom": [
+            "generatedByMemberId",
+            "projectId"
+          ],
+          "columnsTo": [
+            "id",
+            "projectId"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "report_period_valid": {
+          "name": "report_period_valid",
+          "value": "\"weekly_reports\".\"periodStart\" < \"weekly_reports\".\"periodEnd\" AND \"weekly_reports\".\"periodEnd\" <= \"weekly_reports\".\"asOf\""
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {
+    "public.ai_mode": {
+      "name": "ai_mode",
+      "schema": "public",
+      "values": [
+        "real",
+        "mock"
+      ]
+    },
+    "public.project_role": {
+      "name": "project_role",
+      "schema": "public",
+      "values": [
+        "leader",
+        "member"
+      ]
+    },
+    "public.task_status": {
+      "name": "task_status",
+      "schema": "public",
+      "values": [
+        "todo",
+        "in_progress",
+        "blocked",
+        "in_review",
+        "changes_requested",
+        "done"
+      ]
+    }
+  },
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

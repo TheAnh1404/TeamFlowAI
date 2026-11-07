@@ -5,8 +5,22 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1793996654289,
-      "tag": "0000_tracking_foundation",
+      "when": 1794019572473,
+      "tag": "0000_rare_logan",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1794020044331,
+      "tag": "0001_romantic_starjammers",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794020072324,
+      "tag": "0002_invariants",
       "breakpoints": true
     }
   ]
