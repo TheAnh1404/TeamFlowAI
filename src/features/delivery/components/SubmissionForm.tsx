@@ -113,11 +113,35 @@ export function SubmissionForm({ task, onSubmitted, disabled = false, onDirtyCha
 
       {/* Content TextArea */}
       <div>
-        <div className="mb-1 flex items-center justify-between">
+        <div className="mb-1.5 flex flex-wrap items-center justify-between gap-1">
           <label htmlFor="submission-content" className="block text-xs font-semibold text-[var(--color-text-secondary)]">
-            Nội dung bài nộp (Bắt buộc)
+            Nội dung bài nộp (Văn bản, bảng tính Excel, slide hoặc link ảnh minh chứng)
           </label>
-          {contentType === "markdown" && (
+          <div className="flex flex-wrap items-center gap-2 text-[11px]">
+            <button
+              type="button"
+              onClick={() => {
+                const sample = "\n\n| Hạng mục dữ liệu / Test case | Số lượng | Kết quả kiểm thử |\n|---|:---:|---|\n| Chức năng thanh toán | 50 cases | Pass 100% |\n| Bảng dự toán chi phí | 12 mục | Đã khớp ngân sách |\n";
+                const updated = content + sample;
+                setContent(updated);
+                onDirtyChange?.(updated.trim().length > 0);
+              }}
+              className="text-[var(--color-primary)] hover:underline"
+            >
+              + Bảng Excel/CSV
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const sample = "\n\n### Slide 1: Báo cáo Tiến độ Tuần\n- Mục tiêu: Hoàn tất kiểm thử cổng thanh toán\n- Kết quả: Đã xác thực thành công\n";
+                const updated = content + sample;
+                setContent(updated);
+                onDirtyChange?.(updated.trim().length > 0);
+              }}
+              className="text-[var(--color-primary)] hover:underline"
+            >
+              + Mẫu Slide
+            </button>
             <button
               type="button"
               onClick={() => {
@@ -126,11 +150,11 @@ export function SubmissionForm({ task, onSubmitted, disabled = false, onDirtyCha
                 setContent(updated);
                 onDirtyChange?.(updated.trim().length > 0);
               }}
-              className="text-[11px] font-medium text-[var(--color-primary)] hover:underline"
+              className="text-[var(--color-primary)] hover:underline"
             >
-              + Chèn mẫu ảnh minh chứng
+              + Ảnh minh chứng
             </button>
-          )}
+          </div>
         </div>
         <textarea
           id="submission-content"

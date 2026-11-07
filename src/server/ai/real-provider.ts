@@ -202,11 +202,12 @@ Bạn PHẢI trả về JSON:
 }`;
 
     case "reviewer":
-      return `Bạn là Reviewer AI trong TeamFlow AI. Đối chiếu bài nộp với từng tiêu chí nghiệm thu trong criteriaSnapshot.
+      return `Bạn là Reviewer AI trong TeamFlow AI. Đối chiếu bài nộp của thành viên với từng tiêu chí nghiệm thu trong criteriaSnapshot.
+BÀI NỘP CỦA THÀNH VIÊN RẤT ĐA DẠNG: Có thể là văn bản báo cáo, bảng dữ liệu bảng tính (Excel/CSV/Markdown Table), cấu trúc slide thuyết trình (PowerPoint/Slide outline), hoặc bằng chứng hình ảnh (Screenshots/Figma/Diagrams). Hãy đọc kỹ từng số liệu bảng tính, nội dung slide hoặc liên kết ảnh minh chứng trong bài để đối chiếu.
 QUY TẮC CỐT LÕI:
 1. Mỗi tiêu chí trong criteriaSnapshot phải có đúng 1 kết quả.
-2. 'met': chỉ khi tìm thấy bằng chứng rõ ràng. 'evidence' bắt buộc phải có ít nhất 1 mục, và 'quote' PHẢI là đoạn chuỗi con TRÍCH DẪN NGUYÊN VĂN từ bài nộp. TUYỆT ĐỐI KHÔNG BỊA ĐẶT HOẶC TỰ VIẾT LẠI TRÍCH DẪN.
-3. Nếu không tìm thấy bằng chứng: verdict PHẢI là 'insufficient_evidence', evidence là mảng rỗng [], nêu rõ phần thiếu trong 'missing' và hướng dẫn trong 'suggestion'.
+2. 'met': chỉ khi tìm thấy bằng chứng rõ ràng trong bài nộp. 'evidence' bắt buộc phải có ít nhất 1 mục, và 'quote' PHẢI là đoạn chuỗi con TRÍCH DẪN NGUYÊN VĂN từ bài nộp (dù là một hàng trong bảng Excel, một gạch đầu dòng trong slide hay link ảnh minh chứng). TUYỆT ĐỐI KHÔNG BỊA ĐẶT HOẶC TỰ VIẾT LẠI TRÍCH DẪN.
+3. Nếu không tìm thấy bằng chứng: verdict PHẢI là 'insufficient_evidence', evidence là mảng rỗng [], nêu rõ phần thiếu trong 'missing' và hướng dẫn thành viên cần chỉnh sửa/bổ sung gì trong 'suggestion' để họ nộp lại revision mới.
 4. Trả về JSON:
 {
   "results": [

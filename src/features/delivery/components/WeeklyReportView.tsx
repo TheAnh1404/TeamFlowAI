@@ -167,36 +167,13 @@ export function WeeklyReportView({ projectId }: WeeklyReportViewProps) {
           )}
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          {selectedReport && (
-            <>
-              <a
-                href={`/api/projects/${encodeURIComponent(projectId)}/reports/${encodeURIComponent(selectedReport.id)}/export/excel`}
-                download
-                className="inline-flex items-center gap-1.5 rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)] shadow-xs transition-colors hover:bg-[var(--color-surface-subtle)] hover:text-[var(--color-text-primary)]"
-                title="Tải bảng số liệu KPIs và ma trận kiểm thử dạng Excel (.xlsx)"
-              >
-                <span>📊</span> Tải Excel (.xlsx)
-              </a>
-              <a
-                href={`/api/projects/${encodeURIComponent(projectId)}/export/docx`}
-                download
-                className="inline-flex items-center gap-1.5 rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)] shadow-xs transition-colors hover:bg-[var(--color-surface-subtle)] hover:text-[var(--color-text-primary)]"
-                title="Biên dịch toàn bộ các bài nộp đã nghiệm thu thành file Word (.docx) chuẩn"
-              >
-                <span>📄</span> Xuất Word (.docx)
-              </a>
-            </>
-          )}
-
-          <button
-            type="button"
-            onClick={() => setShowCreateModal(true)}
-            className="inline-flex items-center justify-center rounded-md bg-[var(--color-primary)] px-4 py-2 text-xs font-semibold text-[var(--color-on-primary)] transition-colors hover:bg-[var(--color-primary-hover)] shadow-xs"
-          >
-            + Tạo báo cáo tuần mới
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => setShowCreateModal(true)}
+          className="inline-flex items-center justify-center rounded-md bg-[var(--color-primary)] px-4 py-2 text-xs font-semibold text-[var(--color-on-primary)] transition-colors hover:bg-[var(--color-primary-hover)] shadow-xs"
+        >
+          + Tạo báo cáo tuần mới
+        </button>
       </div>
 
       {/* 3. Empty State */}
