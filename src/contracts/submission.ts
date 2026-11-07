@@ -14,7 +14,9 @@ export const submissionSchema = z.object({
   criteriaSnapshot: z.array(criterionSchema),
   submittedAt: instantSchema,
 });
-export const submitWorkInputSchema = submissionSchema.pick({ contentType: true, content: true }).extend({
+export const submitWorkInputSchema = z.object({
+  contentType: submissionContentTypeSchema,
+  content: z.string().min(1, "Nội dung bài nộp không được để trống").max(32768, "Nội dung bài nộp vượt quá 32KB"),
   expectedTaskVersion: versionSchema,
 });
 export const confirmAcceptanceInputSchema = z.object({

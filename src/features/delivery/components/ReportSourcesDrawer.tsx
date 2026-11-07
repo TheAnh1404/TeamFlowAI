@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import type { SourceRef } from "@/contracts/report";
 
 interface ReportSourcesDrawerProps {
@@ -9,23 +9,43 @@ interface ReportSourcesDrawerProps {
 }
 
 export function ReportSourcesDrawer({ sourceRef, onClose }: ReportSourcesDrawerProps) {
+  useEffect(() => {
+    if (!sourceRef) return;
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [sourceRef, onClose]);
+
   if (!sourceRef) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-xs">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="drawer-source-title"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-xs"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
       <div className="w-full max-w-lg rounded-xl border border-[var(--color-border-subtle)] bg-[var(--color-surface)] p-6 shadow-xl animate-in fade-in zoom-in-95 duration-150">
         <div className="flex items-center justify-between border-b border-[var(--color-border-subtle)] pb-3">
           <div className="flex items-center gap-2">
             <span className="rounded bg-[var(--color-primary-soft)] px-2 py-0.5 text-xs font-bold text-[var(--color-primary)]">
               {sourceRef.entity}
             </span>
-            <h3 className="text-base font-semibold text-[var(--color-text-primary)]">
+            <h3 id="drawer-source-title" className="text-base font-semibold text-[var(--color-text-primary)]">
               Chi tiết nguồn dẫn chứng #{sourceRef.id}
             </h3>
           </div>
           <button
             type="button"
             onClick={onClose}
+            aria-label="Đóng cửa sổ dẫn chứng"
             className="rounded p-1 text-[var(--color-text-muted)] hover:bg-[var(--color-surface-subtle)] hover:text-[var(--color-text-primary)]"
           >
             ✕

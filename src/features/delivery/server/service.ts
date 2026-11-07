@@ -2,10 +2,11 @@ import "server-only";
 import type {
   ConfirmAcceptanceInput, GenerateWeeklyReportInput, Id, MutationOptions,
   ReportMetrics, RequestReviewResult, Review, SourceRef, Submission,
-  SubmitWorkInput, SubmitWorkResult, Task, WeeklyReport,
+  SubmitWorkInput, SubmitWorkResult, Task, TaskStatus, WeeklyReport,
 } from "@/contracts";
-import { aiProvider } from "@/server/ai";
+import { aiProvider, type ReportAiInput } from "@/server/ai";
 import type { Session } from "@/server/auth/contracts";
+import { readReportSnapshot } from "@/server/db/report-snapshot";
 import { deliveryRepository, type DeliveryRepository } from "./repository";
 
 export class DeliveryServiceError extends Error {
@@ -70,12 +71,17 @@ export class DefaultDeliveryService implements DeliveryService {
       throw new DeliveryServiceError(403, "FORBIDDEN", "Chỉ người phụ trách hoặc trưởng nhóm mới có quyền nộp bài.");
     }
 
-    // 5. Kiểm tra version chống xung đột
+    // 5. Kiểm tra giới hạn kích thước bài nộp tối đa 32KB (~32,768 ký tự theo CONTRACTS)
+    if (input.content.length > 32768) {
+      throw new DeliveryServiceError(422, "VALIDATION_ERROR", "Nội dung bài nộp vượt quá giới hạn 32KB cho phép.");
+    }
+
+    // 6. Kiểm tra version chống xung đột
     if (task.version !== input.expectedTaskVersion) {
       throw new DeliveryServiceError(409, "VERSION_CONFLICT", "Dữ liệu công việc đã được cập nhật bởi thao tác khác. Vui lòng tải lại.");
     }
 
-    // 6. Tính toán revision mới
+    // 7. Tính toán revision mới
     const currentSubmissions = await this.repo.listSubmissions(taskId);
     const latestRevision = currentSubmissions.length > 0 ? Math.max(...currentSubmissions.map((s) => s.revision)) : 0;
     const newRevision = latestRevision + 1;
@@ -291,18 +297,31 @@ export class DefaultDeliveryService implements DeliveryService {
 
     const pStartTime = new Date(input.periodStart).getTime();
     const pEndTime = new Date(input.periodEnd).getTime();
-    if (isNaN(pStartTime) || isNaN(pEndTime) || pEndTime < pStartTime) {
-      throw new DeliveryServiceError(422, "VALIDATION_ERROR", "Khoảng thời gian báo cáo không hợp lệ.");
+    if (isNaN(pStartTime) || isNaN(pEndTime) || pEndTime <= pStartTime) {
+      throw new DeliveryServiceError(422, "VALIDATION_ERROR", "Khoảng thời gian báo cáo không hợp lệ (periodEnd phải sau periodStart).");
     }
 
-    const asOf = new Date().toISOString();
+    let asOf = new Date().toISOString();
+    let sources: ReportAiInput["sources"];
+
+    // Khi có cấu hình DATABASE_URL, ưu tiên dùng readReportSnapshot (repeatable-read transaction của TV2)
+    if (process.env.DATABASE_URL) {
+      try {
+        const dbSnapshot = await readReportSnapshot(session, projectId);
+        asOf = dbSnapshot.asOf;
+        sources = dbSnapshot.sources;
+      } catch (dbErr) {
+        console.warn("[DeliveryService] readReportSnapshot từ DB thất bại, fallback sang in-memory repository:", dbErr);
+        sources = await this.repo.readReportSources(projectId, asOf);
+      }
+    } else {
+      sources = await this.repo.readReportSources(projectId, asOf);
+    }
+
     const asOfTime = new Date(asOf).getTime();
 
-    // Đọc snapshot dữ liệu
-    const sources = await this.repo.readReportSources(projectId, asOf);
-
-    // Backend tính toán chính xác 100% metrics độc lập với AI
-    const statusCounts = {
+    // Backend tính toán chính xác 100% metrics độc lập với AI từ cùng một snapshot sources cố định
+    const statusCounts: Record<TaskStatus, number> = {
       todo: 0,
       in_progress: 0,
       blocked: 0,
@@ -317,7 +336,7 @@ export class DefaultDeliveryService implements DeliveryService {
     let overdueOpenTotal = 0;
 
     for (const task of sources.tasks) {
-      if (statusCounts[task.status] !== undefined) {
+      if (task.status in statusCounts) {
         statusCounts[task.status]++;
       }
 

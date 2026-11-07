@@ -58,23 +58,29 @@ export function WeeklyReportView({ projectId }: WeeklyReportViewProps) {
 
   const selectedReport = reports.find((r) => r.id === selectedReportId) || reports[0] || null;
 
+  // Idempotency key thuần túy chuẩn React 19: giữ cố định khi retry, tự đổi khi tạo thành công
+  const [reportSeq, setReportSeq] = useState(1);
+  const reportIdempotencyKey = `rep_${projectId}_seq_${reportSeq}`;
+
   async function handleCreateReport(e: React.FormEvent) {
     e.preventDefault();
     setIsGenerating(true);
     setError(null);
 
-    const idempotencyKey = `report_${projectId}_${Date.now()}`;
-
     try {
+      // Chuyển đổi chính xác 00:00:00 và 23:59:59.999 từ giờ địa phương sang UTC ISO string
+      const startIso = new Date(`${periodStart}T00:00:00`).toISOString();
+      const endIso = new Date(`${periodEnd}T23:59:59.999`).toISOString();
+
       const res = await fetch(`/api/projects/${encodeURIComponent(projectId)}/reports`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Idempotency-Key": idempotencyKey,
+          "Idempotency-Key": reportIdempotencyKey,
         },
         body: JSON.stringify({
-          periodStart: new Date(periodStart).toISOString(),
-          periodEnd: new Date(periodEnd + "T23:59:59.999Z").toISOString(),
+          periodStart: startIso,
+          periodEnd: endIso,
         }),
       });
 
@@ -87,6 +93,8 @@ export function WeeklyReportView({ projectId }: WeeklyReportViewProps) {
       setReports((prev) => [newReport, ...prev]);
       setSelectedReportId(newReport.id);
       setShowCreateModal(false);
+      // Đổi key mới cho lần tạo báo cáo kế tiếp
+      setReportSeq((seq) => seq + 1);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Đã xảy ra lỗi khi tạo báo cáo.");
     } finally {
