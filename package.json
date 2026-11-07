@@ -24,10 +24,13 @@
     "test:managed": "node --conditions=react-server --import ./scripts/register-test-typescript.mjs --test --test-isolation=none tests/*.test.ts",
     "test:ui": "tsx tests/browser/run.ts",
     "test:tracking": "node --test --test-isolation=none src/features/tracking/tests/policy.test.mjs src/features/tracking/tests/security.test.mjs",
-    "test:tracking:integration": "node scripts/test-tracking-integration.mjs"
+    "test:tracking:integration": "node scripts/test-tracking-integration.mjs",
+    "test:coordinator": "node --conditions=react-server --import ./scripts/register-test-typescript.mjs --test --test-isolation=none tests/coordinator.test.ts",
+    "coordinator:tick": "node scripts/coordinator-tick.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "1.2.0",
+    "@node-rs/argon2": "^2.2.2",
     "drizzle-orm": "0.45.4",
     "next": "16.4.5",
     "react": "19.3.1",

@@ -39,6 +39,7 @@ export function createCoordinator(provider: AiProvider = aiProvider, timeoutMs =
       if (!parsed.success || !["real", "mock"].includes(result?.aiMode)) {
         throw new HttpError(502, "AI_INVALID_OUTPUT", "Coordinator trả dữ liệu không hợp lệ. Chưa lưu tin nhắn.");
       }
+      if (mode === "real" && result.aiMode !== "real") throw new HttpError(502,"AI_UNAVAILABLE","Chế độ real chưa có provider thật; không thay bằng mô phỏng.");
       return { proposal: parsed.data, aiMode: result.aiMode };
     } catch (error) {
       if (error instanceof HttpError || error instanceof FeatureNotImplementedError) throw error;

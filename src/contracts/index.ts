@@ -9,3 +9,4 @@ export * from "./tracking";
 export * from "./submission";
 export * from "./review";
 export * from "./report";
+export * from "./coordinator";

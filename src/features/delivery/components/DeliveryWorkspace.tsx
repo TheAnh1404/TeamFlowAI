@@ -47,6 +47,25 @@ export function DeliveryWorkspace({
     async function loadData() {
       setIsLoading(true);
       setLoadError(null);
+      if (task.id.startsWith("task-demo")) {
+        const demoSub: Submission = {
+          id: "sub-demo-1",
+          projectId: "demo-event-website",
+          taskId: task.id,
+          authorMemberId: "member-tv2",
+          revision: 1,
+          contentType: "markdown",
+          content: "# Báo cáo hoàn thành Landing Page\n\n- Đã thiết kế responsive trên Mobile (375px) và Desktop (1440px).\n- Tích hợp kiểm tra email và số điện thoại tại form đăng ký.",
+          criteriaSnapshot: task.criteria,
+          submittedAt: "2026-11-06T10:00:00.000Z",
+        };
+        if (isMounted) {
+          setSubmissions([demoSub]);
+          setSelectedSubmission(demoSub);
+          setIsLoading(false);
+        }
+        return;
+      }
       try {
         const res = await fetch(`/api/tasks/${encodeURIComponent(task.id)}/submissions`);
         if (!res.ok) throw new Error("Không thể tải lịch sử bài nộp. Vui lòng tải lại công việc.");
@@ -70,7 +89,7 @@ export function DeliveryWorkspace({
     return () => {
       isMounted = false;
     };
-  }, [task.id]);
+  }, [task.id, task.criteria]);
 
   // Load review khi chọn submission
   useEffect(() => {
@@ -80,6 +99,35 @@ export function DeliveryWorkspace({
     }
 
     async function loadReview() {
+      if (selectedSubmission!.id === "sub-demo-1") {
+        const demoRev: Review = {
+          id: "rev-demo-1",
+          projectId: "demo-event-website",
+          taskId: task.id,
+          submissionId: "sub-demo-1",
+          results: [
+            {
+              criterionId: "CRIT-01",
+              verdict: "met",
+              evidence: [{ submissionId: "sub-demo-1", quote: "Đã thiết kế responsive trên Mobile (375px) và Desktop (1440px)." }],
+              missing: "",
+              suggestion: "Giao diện hiển thị tốt trên các kích thước màn hình phổ biến.",
+            },
+            {
+              criterionId: "CRIT-02",
+              verdict: "met",
+              evidence: [{ submissionId: "sub-demo-1", quote: "Tích hợp kiểm tra email và số điện thoại tại form đăng ký." }],
+              missing: "",
+              suggestion: "Đã có validation cơ bản cho trường thông tin.",
+            },
+          ],
+          summary: "Bài nộp đáp ứng đầy đủ tiêu chí giao diện và form đăng ký.",
+          aiMode: "real",
+          createdAt: "2026-11-06T10:02:00.000Z",
+        };
+        if (isMounted) setReview(demoRev);
+        return;
+      }
       try {
         const res = await fetch(`/api/submissions/${encodeURIComponent(selectedSubmission!.id)}/review`);
         if (!res.ok) throw new Error("Không thể tải nhận xét. Vui lòng tải lại công việc.");
@@ -96,7 +144,7 @@ export function DeliveryWorkspace({
     return () => {
       isMounted = false;
     };
-  }, [selectedSubmission]);
+  }, [selectedSubmission, task.id]);
 
   function handleSelectSubmission(sub: Submission) {
     setSelectedSubmission(sub);

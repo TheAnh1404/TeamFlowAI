@@ -1,5 +1,7 @@
 # TeamFlow AI
 
+> **Coordinator V2 (07/11/2026):** đã bổ sung backend chat lưu trước AI, check-in/revision, lịch nhắc app/chat/email, queue/lease/retry, verified email và report draft/snapshot/publish. Frontend đang ghép ở phiên riêng; điểm nối tại [COORDINATOR_FRONTEND_HANDOFF](docs/COORDINATOR_FRONTEND_HANDOFF.md). Migration 0004–0006 đã kiểm bằng PGlite, chưa tự áp lên Neon dùng chung; scheduler/email thực chưa được bật hoặc nghiệm thu. Hướng dẫn cấu hình/kiểm thử: [COORDINATOR_OPERATIONS](docs/COORDINATOR_OPERATIONS.md). Các mô tả scaffold/phiên TV2 cũ bên dưới là lịch sử.
+
 > Cập nhật TV2: đã triển khai schema/migration, session/quyền, API tracking và UI P02/P05/P06 shell/P07. Xem [bàn giao TV2](docs/TV2_HANDOFF.md) để cấu hình và nối TV1/TV3. Neon thật và vòng tích hợp toàn nhóm chưa được kiểm chứng; các mục scaffold bên dưới mô tả nền ban đầu.
 
 Dự án nhóm TV1/TV2/TV3 tham gia **DevDay Exchange Community: Da Nang City**, hỗ trợ nhóm nhỏ (3–8 người) lập kế hoạch, theo dõi và nghiệm thu công việc bằng ba trợ lý AI.

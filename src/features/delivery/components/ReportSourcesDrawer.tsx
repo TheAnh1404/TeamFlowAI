@@ -14,6 +14,22 @@ export function ReportSourcesDrawer({ reportId, sourceRef, onClose }: ReportSour
   const sourceKey = `${reportId}:${sourceRef?.entity}:${sourceRef?.id}`;
   useEffect(() => {
     if (!sourceRef) return;
+    if (reportId.startsWith("report-demo")) {
+      const demoEvidence = {
+        entity: sourceRef.entity,
+        id: sourceRef.id,
+        snapshotAsOf: "2026-11-07T17:00:00.000Z",
+        verified: true,
+        summary:
+          sourceRef.id === "task-demo-2"
+            ? "Task bị chặn do sự cố SMTP rate limit 429 từ nhà cung cấp email."
+            : "Bài nộp giao diện Landing Page đã hoàn thành và đang chờ nghiệm thu.",
+      };
+      queueMicrotask(() => {
+        setContent({ key: sourceKey, text: JSON.stringify(demoEvidence, null, 2) });
+      });
+      return;
+    }
     const abort = new AbortController();
     const query = new URLSearchParams({ entity: sourceRef.entity, sourceId: sourceRef.id });
     fetch(`/api/reports/${encodeURIComponent(reportId)}?${query}`, { signal: abort.signal })

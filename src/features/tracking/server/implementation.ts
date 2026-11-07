@@ -1,7 +1,7 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import {
   messageSchema,
   progressUpdateSchema,
@@ -14,7 +14,7 @@ import {
   type ProjectMember,
 } from "@/contracts";
 import { getDb, type Database, type Transaction } from "@/server/db/client";
-import { messages, tasks, progressUpdates } from "@/server/db/schema";
+import { messages, tasks, progressUpdates, chatPosts } from "@/server/db/schema";
 import { projectMember, taskWithMember, assertUpdater } from "@/server/auth/access";
 import type { Session } from "@/server/auth/contracts";
 import { assert, conflict, notFound } from "@/server/http/errors";
@@ -22,6 +22,7 @@ import { commitMutation, mutationIdentity, replay } from "@/server/db/mutations"
 import { createCoordinator, type Coordinator } from "./coordinator";
 import { trackingReader } from "./store";
 import type { TrackingService } from "./service";
+import { serializeProject } from "@/server/automation/queue";
 
 export const progressMessageResultSchema = z.object({
   message: messageSchema,
@@ -67,6 +68,7 @@ export function createTrackingService(db: Database, coordinator: Coordinator = c
         (proposal.intent === "update" && (!target || !proposal.requestedStatus || (input.taskId && input.taskId !== target.id) || (proposal.requestedStatus === "blocked" && !proposal.blocker?.trim())));
       return commitMutation(db, identity, async (tx) => {
         const actor = await projectMember(tx, session, projectId);
+        await serializeProject(tx,projectId);
         const message: Message = {
           id: randomUUID(),
           projectId,
@@ -104,6 +106,7 @@ export function createTrackingService(db: Database, coordinator: Coordinator = c
         // A per-message lock serializes two different keys resolving the same message.
         const [current] = await tx.select().from(messages).where(eq(messages.id, messageId)).for("update");
         const actor = await projectMember(tx, session, current.projectId);
+        await serializeProject(tx,current.projectId);
         assert(actor.id === current.authorMemberId, 403, "FORBIDDEN", "Chỉ tác giả được làm rõ tin nhắn.");
         assert(current.resolution === "clarification_required", 409, "INVALID_TRANSITION", "Tin nhắn đã được xử lý; hãy tải lại lịch sử chat.");
         const { task, member: updater } = await lockTask(tx, session, input.taskId);
@@ -140,9 +143,12 @@ async function apply(tx: Transaction, original: Message, task: Task, status: "in
   };
   if (insert) await tx.insert(messages).values(message);
   else await tx.update(messages).set(message).where(eq(messages.id, message.id));
+  await tx.execute(sql`select set_config('teamflow.actor_member_id',${message.authorMemberId},true)`);
   const [updated] = await tx.update(tasks).set({ status, version: task.version + 1 }).where(and(eq(tasks.id, task.id), eq(tasks.version, task.version))).returning();
   if (!updated) throw conflict();
   await tx.insert(progressUpdates).values(progressUpdate);
+  const [source] = await tx.select({ chatPostId: messages.chatPostId }).from(messages).where(eq(messages.id,message.id));
+  if (source?.chatPostId) await tx.update(chatPosts).set({ analysisStatus: "analyzed", updatedAt: new Date().toISOString() }).where(eq(chatPosts.id,source.chatPostId));
   return { message, progressUpdate, task: updated };
 }
 

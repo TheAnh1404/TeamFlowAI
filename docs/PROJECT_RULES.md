@@ -1,5 +1,9 @@
 # Quy tắc dự án và phối hợp
 
+> Cập nhật phạm vi 07/11/2026: phiên người dùng yêu cầu triển khai `TV2_CHAT_COORDINATOR_PLAN.md` cho phép backend chat V2/check-in, queue PostgreSQL, scheduler HTTP được xác thực, app/chat/email và draft báo cáo tuần/trước họp. V1 giữ tương thích. Quy định chỉ làm tài liệu và báo cáo chỉ bằng nút bên dưới là bối cảnh phiên cũ; không cấm phạm vi mở rộng đã được yêu cầu. Frontend đang được thực hiện ở phiên riêng: dùng `COORDINATOR_FRONTEND_HANDOFF.md`, tránh ghi đè file giao diện đang sửa.
+
+Automation không dùng session leader giả, không tự công bố plan/đổi assignee/deadline/criteria/nghiệm thu. Lưu nguồn trước AI; job có dedupe/lease/fencing và retry hữu hạn. Draft report chỉ leader xem, publish bằng hành động xác nhận. Email verified/opt-in/suppression được kiểm lại trước gửi. Xem `COORDINATOR_OPERATIONS.md` cho rollout và giới hạn chưa kiểm chứng.
+
 ## Phạm vi phiên
 
 Phiên hiện tại chỉ tạo/cập nhật 10 tài liệu: [AGENTS](../AGENTS.md), [README](../README.md), file này, [CONTRACTS](CONTRACTS.md), ba file [TV1](tasks/TV1_PLANNING.md)/[TV2](tasks/TV2_TRACKING.md)/[TV3](tasks/TV3_DELIVERY.md), [TIMELINE_4H](TIMELINE_4H.md), [START_HERE](START_HERE.md), [DEMO_CHECKLIST](DEMO_CHECKLIST.md). Không viết mã/cấu hình/schema/migration/seed/test/workflow, cài đặt, gọi API ngoài, chạy ứng dụng/build/test hay thao tác commit/push/nhánh/remote. Không sửa file prompt có sẵn. Các việc triển khai dưới đây dành cho phiên sau có prompt triển khai rõ ràng.

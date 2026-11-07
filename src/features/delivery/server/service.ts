@@ -82,6 +82,7 @@ export function createDeliveryService(db: Database, ai: AiProvider = aiProvider)
           content: input.content, criteriaSnapshot: task.criteria, submittedAt: new Date().toISOString(),
         };
         await tx.insert(submissions).values(submission);
+        await tx.execute(sql`select set_config('teamflow.actor_member_id',${member.id},true)`);
         const [updated] = await tx.update(tasks).set({ status: "in_review", version: task.version + 1 }).where(eq(tasks.id, taskId)).returning();
         return { submission, task: updated };
       });
@@ -113,6 +114,7 @@ export function createDeliveryService(db: Database, ai: AiProvider = aiProvider)
         const latest = (await listTaskSubmissions(tx, task.id))[0];
         let updated = current;
         if (latest?.id === submissionId && current.status !== "done") {
+          await tx.execute(sql`select set_config('teamflow.actor_member_id',${member.id},true)`);
           const [row] = await tx.update(tasks).set({
             status: review.results.some(r => r.verdict === "not_met") ? "changes_requested" : "in_review",
             version: current.version + 1,

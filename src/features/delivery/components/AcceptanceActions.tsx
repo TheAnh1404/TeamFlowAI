@@ -39,6 +39,20 @@ export function AcceptanceActions({
     setIsSubmitting(true);
     setError(null);
 
+    if (task.id.startsWith("task-demo")) {
+      const updated: Task = {
+        ...task,
+        status: "done",
+        version: task.version + 1,
+        acceptedSubmissionId: submission.id,
+        acceptedByMemberId: "member-tv1",
+        acceptedAt: new Date().toISOString(),
+      };
+      setIsSubmitting(false);
+      onAccepted(updated);
+      return;
+    }
+
     const idempotencyKey = `accept_${task.id}_${task.version}_${Date.now()}`;
 
     try {

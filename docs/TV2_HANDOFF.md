@@ -1,5 +1,7 @@
 # TV2 — Bàn giao triển khai Tracking, Neon và Session
 
+> Bổ sung 07/11/2026: backend Coordinator V2, migrations 0004–0006 và tests đã được thêm; xem [frontend handoff](COORDINATOR_FRONTEND_HANDOFF.md), [operations](COORDINATOR_OPERATIONS.md). Các kết quả Neon/DB ở phần bàn giao cũ bên dưới không có nghĩa migrations Coordinator mới đã áp lên database chung. Frontend đang triển khai ở phiên riêng; giữ nguyên các thay đổi đó.
+
 Phạm vi: phần TV2 theo [nhiệm vụ](tasks/TV2_TRACKING.md), [AGENTS](../AGENTS.md) và [contracts](CONTRACTS.md). Giữ stack Next.js 16.4.5, React 19.3.1, TypeScript strict, Tailwind v4, Drizzle 0.45.4/Kit 0.31.11 và Neon.
 
 ## Trạng thái và giới hạn

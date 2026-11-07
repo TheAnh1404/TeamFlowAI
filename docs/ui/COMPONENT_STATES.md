@@ -1,5 +1,7 @@
 # Danh Mục Thành Phần và Ma Trận Trạng Thái (Component States & Inventory) — TeamFlow AI
 
+> Coordinator V2: ChatPost có queued/skipped/analyzed/clarification_required/failed; “Đã lưu” không đồng nghĩa task đã cập nhật. Check-in có not_requested/awaiting/draft/submitted/paused/skipped, version conflict giữ nội dung và yêu cầu tải bản mới. Report queued/generating/failed/attention/draft/published/canceled, failed vẫn giữ snapshot/metrics, draft chỉ leader. Hệ thống reminder không có aiMode giả. App/chat/email hiển thị khả năng riêng, verified/opt-in/suppression riêng. Component tham khảo và điểm ghép ở [COORDINATOR_FRONTEND_HANDOFF](../COORDINATOR_FRONTEND_HANDOFF.md).
+
 > [!IMPORTANT]
 > **Đặc tả chi tiết các thành phần giao diện dùng chung (UI Components) cho phiên triển khai.**
 > Tài liệu này đóng vai trò hợp đồng giao diện, quy định cấu trúc (Anatomy), biến thể (Variants), ma trận trạng thái (States Matrix), hành vi bàn phím (Keyboard Navigation) và trách nhiệm sở hữu (Owner) giữa TV1, TV2 và TV3.

@@ -1,5 +1,7 @@
 # Đặc Tả Chi Tiết Từng Màn Hình (Page Specifications) — TeamFlow AI
 
+> Phạm vi Coordinator V2 (07/11/2026) bổ sung trong P07: feed incremental/tải cũ, mention/task/reply, trạng thái Đã lưu/chờ phân tích/lỗi phân tích, form kế hoạch/check-in autosave và revision, bảng cập nhật nhóm, inbox và panel lịch/preferences. P08 thêm weekly/meeting report request trả queued, nguồn frozen tại asOf, phút tự khai/unknown, status tự báo/nộp/nghiệm thu riêng, sửa diễn giải và share đúng version bởi leader. Schedule settings/meeting editor nằm trong P07/P08; không thêm trang ngoài scope. Chi tiết props/API: [handoff](../COORDINATOR_FRONTEND_HANDOFF.md); lịch thật chưa bật: [operations](../COORDINATOR_OPERATIONS.md).
+
 > [!IMPORTANT]
 > **Tài liệu đặc tả chi tiết giao diện cho 8 màn hình (P01 – P08).**
 > Mọi màn hình được mô tả theo khuôn mẫu 10 điểm bắt buộc. Dữ liệu ví dụ xuyên suốt sử dụng chung một kịch bản dự án mẫu: **"Dự án Nền tảng Đặt phòng Homestay"** với ba thành viên:

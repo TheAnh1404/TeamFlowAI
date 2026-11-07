@@ -1,5 +1,7 @@
 # TV3 — Delivery, review, báo cáo và AI dùng chung
 
+> Mở rộng Coordinator V2 07/11/2026: thêm AI kind `coordinator_report_v2` với snapshot/metrics, validation source/quote/numbers, engine draft/frozen sources/publish và report tuần/trước họp. Tầng backend đã có trong `src/features/delivery/server/coordinator-reports.ts`; dùng chung `calculateReportMetrics` V1, không gọi wrapper V1 để chụp snapshot khác. P08 ghép bởi phiên frontend theo [handoff](../COORDINATOR_FRONTEND_HANDOFF.md). Draft chỉ leader xem; publish explicit expectedVersion. Sự kiện task được ghi bằng trigger cùng transaction, actor được set server-side trong submission/review. [Vận hành/giới hạn](../COORDINATOR_OPERATIONS.md); automation thật chưa bật.
+
 ## Vai trò và phạm vi sở hữu
 
 TV3 làm **UI + API + logic** nộp bài, Reviewer, góp ý/nộp lại, nghiệm thu và báo cáo; là đầu mối lớp AI dùng chung, kiểm tra output và lỗi. Báo cáo là vai trò sản phẩm của **Coordinator**, giao TV3 triển khai để cân bằng khối lượng. Nhánh đề xuất `feat/delivery`, chưa tạo trong phiên tài liệu.

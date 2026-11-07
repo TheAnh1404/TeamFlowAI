@@ -1,5 +1,7 @@
 # Kiến Trúc Trang và Luồng Thao Tác (Sitemap & Flows) — TeamFlow AI
 
+> Mở rộng 07/11/2026: giữ P01–P08. P07 chứa chat/check-in/inbox/preference/schedule; P08 chứa danh sách report V2, nguồn tại snapshot và lịch chuẩn bị họp. Automation chỉ tạo draft leader-only; leader bấm chia sẻ thì member mới thấy. Email link chỉ mở app, vẫn cần session/membership. API V2 và các component để phiên frontend ghép tại [handoff](../COORDINATOR_FRONTEND_HANDOFF.md). Bối cảnh “báo cáo chỉ bằng nút” của MVP cũ được mở rộng theo kế hoạch Coordinator đã được yêu cầu.
+
 > [!IMPORTANT]
 > **Tài liệu đặc tả hợp đồng điều hướng và các luồng nghiệp vụ cốt lõi.**
 > Mọi đường dẫn route trong tài liệu này là quy ước đề xuất cho phiên triển khai. Không tạo thêm các trang ngoài danh mục (không thêm trang auth/pricing/settings riêng). Các luồng nghiệp vụ bảo đảm tính nhất quán với [CONTRACTS](../CONTRACTS.md) và [PROJECT_RULES](../PROJECT_RULES.md).

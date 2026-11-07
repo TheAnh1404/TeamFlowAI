@@ -16,7 +16,7 @@ TeamFlow AI là dự án của TV1/TV2/TV3 tại DevDay Exchange Community: Da N
   - Kế hoạch chưa duyệt không công bố task; công bố phải chống trùng khi retry.
   - Chat chỉ cập nhật đúng task/đúng quyền, không đổi người phụ trách/deadline/tiêu chí; mơ hồ phải hỏi lại. Không suy “gần xong” thành phần trăm.
   - Review phải có bằng chứng hoặc `insufficient_evidence`; chỉ trưởng nhóm/người nghiệm thu xác nhận `done`.
-  - Báo cáo tuần kích hoạt bằng nút bấm, có snapshot thời gian/nguồn đã lưu, tách thời điểm nộp và nghiệm thu; không phải scheduler.
+  - Báo cáo V1 kích hoạt bằng nút. Phạm vi Coordinator V2 theo `docs/TV2_CHAT_COORDINATOR_PLAN.md` cho phép scheduler tạo **bản nháp** tuần/trước họp; chỉ leader được chia sẻ. Snapshot/nguồn bất biến, tách tự báo/nộp/nghiệm thu. Automation mặc định tắt; scheduler/email thật cần cấu hình và kiểm chứng riêng.
 - **Quy chuẩn Giao diện**: Tuân thủ [UI_RULES](docs/ui/UI_RULES.md), [DESIGN_SYSTEM](docs/ui/DESIGN_SYSTEM.md), [SITEMAP_AND_FLOWS](docs/ui/SITEMAP_AND_FLOWS.md), [PAGE_SPECS](docs/ui/PAGE_SPECS.md), [COMPONENT_STATES](docs/ui/COMPONENT_STATES.md) và [UI_ACCEPTANCE_CHECKLIST](docs/ui/UI_ACCEPTANCE_CHECKLIST.md). Dùng token màu cố định, không thêm trang ngoài scope MVP, không dùng phần trăm giả và giữ con người phê duyệt.
 - **Báo cáo trung thực**: Dùng dữ liệu mẫu cùng contract để phát triển UI/AI khi chờ dependency; ghi rõ mock hay AI thật. Giữ nguyên thay đổi chưa commit và nội dung ngoài nhiệm vụ. Chỉ báo checks thực sự đã chạy và tính năng thực sự đã kiểm chứng.
 - **Kỷ luật repository**: Không tạo `AGENTS.override.md`, không sửa cấu hình Codex ngoài repo. Không commit/push/tạo nhánh/remote nếu phiên hiện tại chưa yêu cầu.

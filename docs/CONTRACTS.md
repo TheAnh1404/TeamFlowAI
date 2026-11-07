@@ -1,5 +1,18 @@
 # Contracts thiết kế MVP
 
+## Phụ lục phạm vi Coordinator V2 — 07/11/2026
+
+Contracts V1 giữ nguyên. V2 ở `src/contracts/coordinator.ts` (export qua `@/contracts`), DTO/API cụ thể tại [COORDINATOR_FRONTEND_HANDOFF](COORDINATOR_FRONTEND_HANDOFF.md). Đây là phần mở rộng đã được người dùng yêu cầu, cho phép scheduler tạo report **draft**, không tự publish hoặc nghiệm thu task.
+
+- ChatPost riêng với analysisStatus; feed discriminated union `kind: post | event | legacy`. Lưu chat + enqueue atomic, HTTP 201 sau commit. Message có `chatPostId` nullable unique ở DB; V1 caller không cần field này. System không giả User/ProjectMember.
+- CheckinPayload gồm plannedWork/completedWork/noWorkUpdate/blockers/nextActions/sourcePostIds/sourceEvidence. Work item id ổn định, taskId/minutes nullable; sourceEvidence chỉ ProgressUpdate/Submission của chính tác giả. Draft expectedVersion bắt đầu 0, submit thêm revision append-only. Không đổi Task.done.
+- Schedule timezone/workdays/holidays/times/weeklyMode/channels/participant IDs, expectedVersion và effectiveAt. Timezone dùng IANA; Instant UTC. Occurrence key không đổi theo retry/schedule version; payload version được kiểm lại trước side effect.
+- Job nội bộ có type allowlist, claimToken/lease/attempts/runAt/expiresAt. AutomationExecutionContext không nhận từ JSON browser, không phải session leader. Email recipient từ User DB, verified/opt-in/suppression; email link không cấp quyền.
+- ReportArtifact V2 nằm trong coordinator_report_runs, có status queued/generating/failed/attention/draft/published/canceled, version, snapshotHash, snapshot/metrics/summary, summaryHistory, aiMode, metadata thời điểm và publishedAt/by. Draft leader-only, member chỉ published; source V2 gồm ChatPost/CheckinRevision/TaskActivityEvent/CheckinRequest và nguồn V1. Source API đọc snapshot, không đọc bản hiện tại. `hasUpdatesAfterSnapshot` là cờ riêng, không thay snapshot.
+- Mọi mutation có strict JSON/origin/body bounds; các operation tạo phiên bản dùng Idempotency-Key và expectedVersion. Quyền hiện tại được kiểm trước replay. Không nhận author/userId/role từ client làm actor.
+
+Chi tiết schema/migration/scheduler/email, tests và phần chưa kiểm chứng thật: [COORDINATOR_OPERATIONS](COORDINATOR_OPERATIONS.md).
+
 > **Trạng thái phiên TV2:** data shapes đã có tại `src/contracts/`; tracking/auth và các read model bổ sung ở cuối tài liệu đã được triển khai. TV1/TV3 còn giữ stub. Đặc tả nghiệp vụ gốc bên dưới vẫn là nguồn tên trường/enum, không có nghĩa mọi API đã hoạt động. Xem [TV2_HANDOFF](TV2_HANDOFF.md).
 
 **Chỉ là đặc tả dự kiến trong Markdown.** Chưa tạo type, schema, migration, endpoint, wrapper AI hay database thật. Stack, kiểu ID vật lý, session, provider/model AI **chưa chốt**. TV2 điều phối contract/dữ liệu; TV1 xác nhận planning/UI; TV3 xác nhận AI/delivery/report. Đọc cùng [quy tắc](PROJECT_RULES.md) và [timeline](TIMELINE_4H.md).

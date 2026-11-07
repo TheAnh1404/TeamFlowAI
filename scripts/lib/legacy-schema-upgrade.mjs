@@ -12,7 +12,9 @@ const countsFor = async (client, tables) => Object.fromEntries(await Promise.all
 
 export async function upgradeLegacyFoundation(client, { apply = false, migrationsFolder = "./drizzle" } = {}) {
   const migrations = readMigrationFiles({ migrationsFolder });
-  if (migrations.length !== 3) throw new Error("Chỉ hỗ trợ đúng ba migration hiện hành; cần review lại khi journal thay đổi.");
+  const reviewedTags = ["0000_rare_logan", "0001_romantic_starjammers", "0002_invariants", "0003_auth_credentials_and_rate_limits", "0004_coordinator_workspace", "0005_coordinator_invariants", "0006_email_verification"];
+  const journal = JSON.parse(readFileSync(migrationsFolder + "/meta/_journal.json", "utf8"));
+  if (migrations.length < 3 || migrations.length > reviewedTags.length || journal.entries.some((entry, index) => entry.tag !== reviewedTags[index])) throw new Error("Migration chưa được review cho legacy upgrade.");
   const legacySql = readFileSync(migrationsFolder + "/0000_tracking_foundation.sql", "utf8");
   const legacyHashes = new Set([legacySql, legacySql.replaceAll("\r\n", "\n")].map(text => createHash("sha256").update(text).digest("hex")));
   const baseSql = readFileSync(migrationsFolder + "/0000_rare_logan.sql", "utf8");

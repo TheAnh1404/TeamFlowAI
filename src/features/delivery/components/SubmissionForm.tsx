@@ -27,6 +27,32 @@ export function SubmissionForm({ task, onSubmitted, disabled = false, onDirtyCha
     setIsSubmitting(true);
     setError(null);
 
+    if (task.id.startsWith("task-demo")) {
+      const mockResult: SubmitWorkResult = {
+        submission: {
+          id: `sub-demo-${Date.now()}`,
+          projectId: task.projectId,
+          taskId: task.id,
+          authorMemberId: "member-tv2",
+          revision: task.version + 1,
+          contentType,
+          content,
+          criteriaSnapshot: task.criteria,
+          submittedAt: new Date().toISOString(),
+        },
+        task: {
+          ...task,
+          status: "in_review",
+          version: task.version + 1,
+        },
+      };
+      setContent("");
+      setIsSubmitting(false);
+      onDirtyChange?.(false);
+      onSubmitted(mockResult);
+      return;
+    }
+
     const idempotencyKey = requestKey(retry, { taskId: task.id, contentType, content, expectedTaskVersion: task.version });
 
     try {

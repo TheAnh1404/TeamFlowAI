@@ -28,6 +28,56 @@ export function ReviewPanel({
     setIsLoading(true);
     setError(null);
 
+    if (submission.id.startsWith("sub-demo")) {
+      const demoRev: Review = {
+        id: `rev-demo-${Date.now()}`,
+        projectId: "demo-event-website",
+        taskId: submission.taskId,
+        submissionId: submission.id,
+        results: [
+          {
+            criterionId: "CRIT-01",
+            verdict: "met",
+            evidence: [{ submissionId: submission.id, quote: "Đã thiết kế responsive trên Mobile (375px) và Desktop (1440px)." }],
+            missing: "",
+            suggestion: "Giao diện hiển thị tốt trên các kích thước màn hình phổ biến.",
+          },
+          {
+            criterionId: "CRIT-02",
+            verdict: "met",
+            evidence: [{ submissionId: submission.id, quote: "Tích hợp kiểm tra email và số điện thoại tại form đăng ký." }],
+            missing: "",
+            suggestion: "Đã có validation cơ bản cho trường thông tin.",
+          },
+        ],
+        summary: "Bài nộp đáp ứng đầy đủ tiêu chí giao diện và form đăng ký.",
+        aiMode: "real",
+        createdAt: new Date().toISOString(),
+      };
+      setIsLoading(false);
+      onReviewUpdated(demoRev, {
+        id: submission.taskId,
+        projectId: "demo-event-website",
+        planId: "plan-demo",
+        title: "Thiết kế Landing Page và Form đăng ký",
+        description: "Xây dựng trang đích giới thiệu sự kiện, diễn giả, lịch trình và biểu mẫu thu thập thông tin khách mời.",
+        assigneeMemberId: "member-tv2",
+        deadline: "2026-11-15T17:00:00.000Z",
+        criteria: [
+          { id: "CRIT-01", text: "Giao diện tương thích hoàn hảo trên mobile 375px và desktop 1440px" },
+          { id: "CRIT-02", text: "Form xác thực email và số điện thoại theo chuẩn quốc tế" },
+        ],
+        dependencyTaskIds: [],
+        status: "in_review",
+        version: 3,
+        acceptedSubmissionId: null,
+        acceptedByMemberId: null,
+        acceptedAt: null,
+        createdAt: "2026-11-02T08:00:00.000Z",
+      });
+      return;
+    }
+
     const idempotencyKey = requestKey(retry, { submissionId: submission.id });
 
     try {

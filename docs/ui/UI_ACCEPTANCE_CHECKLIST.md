@@ -1,5 +1,20 @@
 # Danh Mục Kiểm Tra Nghiệm Thu Giao Diện (UI Acceptance Checklist) — TeamFlow AI
 
+## Bổ sung Coordinator V2 — chờ nghiệm thu tích hợp
+
+- [ ] Hai tài khoản thật trao đổi/tải cũ/reload; retry một key không trùng; AI outage vẫn lưu raw.
+- [ ] Polling chỉ khi visible/online; merge kind+id, cập nhật analysis không nhân bản tin; đọc tin cũ không bị kéo xuống.
+- [ ] Check-in autosave/submit/retry/version conflict; giữ draft, lịch sử revision, nguồn của chính tác giả, phút unknown khác 0.
+- [ ] Reminder Hệ thống, một tin chung/slot; đúng người/ngày/quiet hours; app/chat vẫn hoạt động khi email chưa cấu hình.
+- [ ] Inbox chỉ user sở hữu, mark-read không biến thành check-in; schedule preview/pause và trạng thái từng kênh chính xác.
+- [ ] Report nháp không lộ qua list/detail/source/notification cho member; share đúng version có xác nhận.
+- [ ] Nguồn tại asOf bất biến, link bản hiện tại có nhãn riêng; sửa check-in không đổi report cũ.
+- [ ] Phân biệt tự báo/nộp/nghiệm thu/thiếu dữ liệu, không suy giờ/phần trăm/năng suất.
+- [ ] Worker chạy khi đóng mọi tab, email verified sandbox và signed webhook được thử trên hạ tầng thật; không nghiệm thu bằng fixture.
+- [ ] Kiểm tra mobile 360px, keyboard/IME, focus/dialog, input giữ khi lỗi và nhãn real/mock.
+
+Backend contracts/điểm ghép: [COORDINATOR_FRONTEND_HANDOFF](../COORDINATOR_FRONTEND_HANDOFF.md). Kết quả test và các mục chưa kiểm chứng thật: [COORDINATOR_OPERATIONS](../COORDINATOR_OPERATIONS.md).
+
 > [!WARNING]
 > **Checklist kiểm thử giao diện cho phiên triển khai sau.**
 > Hiện tại toàn bộ hệ thống đang ở giai đoạn đặc tả tài liệu, chưa có mã nguồn giao diện hoạt động. **Tất cả các mục kiểm tra dưới đây đều ở trạng thái CHƯA HOÀN THÀNH (`- [ ]`)**.

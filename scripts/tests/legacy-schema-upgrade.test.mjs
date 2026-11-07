@@ -27,7 +27,8 @@ test("legacy upgrade is previewable, preserves users/sessions, and is idempotent
     assert.equal(result.applied, true);
     assert.equal((await db.query('select "displayName" from users')).rows[0].displayName, "TV2");
     assert.equal((await db.query('select "userId" from sessions')).rows[0].userId, "demo-tv2");
-    assert.equal((await db.query("select count(*)::int as count from drizzle.__drizzle_migrations")).rows[0].count, 4);
+    const migrationCount = JSON.parse(readFileSync("drizzle/meta/_journal.json", "utf8")).entries.length;
+    assert.equal((await db.query("select count(*)::int as count from drizzle.__drizzle_migrations")).rows[0].count, migrationCount + 1);
     const types = await db.query("select column_name,data_type from information_schema.columns where table_name='projects' and column_name='deliverables'");
     assert.equal(types.rows[0].data_type, "jsonb");
     const second = await upgradeLegacyFoundation(db, { apply: true });

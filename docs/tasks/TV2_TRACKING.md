@@ -1,5 +1,7 @@
 # TV2 — Tracking, dữ liệu và tích hợp
 
+> Mở rộng 07/11/2026 theo yêu cầu triển khai [Coordinator plan](../TV2_CHAT_COORDINATOR_PLAN.md): TV2 thêm chat raw/feed V2, check-in/revision, inbox/preferences, scheduler HTTP, jobs/outbox/lease/fencing, email/verification, nguồn snapshot/task events và API lịch/report V2. Không tự nghiệm thu task hoặc công bố report. API V1 giữ tương thích. Bàn giao frontend ở [COORDINATOR_FRONTEND_HANDOFF](../COORDINATOR_FRONTEND_HANDOFF.md); cấu hình và kiểm chứng thật ở [COORDINATOR_OPERATIONS](../COORDINATOR_OPERATIONS.md). Frontend được thực hiện ở phiên riêng, không ghi đè file đang sửa.
+
 > **Cập nhật phiên triển khai TV2:** đã có code/schema/migration/session/task/chat và kiểm tra riêng phần TV2. Xem [bàn giao và kết quả kiểm chứng](../TV2_HANDOFF.md). Các mô tả “chưa có mã/chưa chốt” bên dưới là bối cảnh khi lập kế hoạch. Checklist mốc phối hợp vẫn chưa đánh dấu hoàn tất vì TV1/TV3 và vòng sản phẩm chung chưa được tích hợp.
 
 ## Vai trò và phạm vi sở hữu

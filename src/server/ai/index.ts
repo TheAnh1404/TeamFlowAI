@@ -13,6 +13,8 @@ import {
   generateMockReviewer,
 } from "./mock-generators";
 import { generateReal, isRealAiConfigured } from "./real-provider";
+import type { CoordinatorReportAiInput } from "./contracts";
+import { validateReportV2 } from "./coordinator-validator";
 import {
   validatePlannerProposal,
   validateReportProposal,
@@ -34,6 +36,11 @@ export const aiProvider: AiProvider = {
 
     // 2. Chế độ Mock thông minh bám sát nghiệp vụ và hợp đồng
     switch (kind) {
+      case "coordinator_report_v2": {
+        const reportInput = input as CoordinatorReportAiInput;
+        const proposal = validateReportV2([{ text: "Bản tổng hợp mô phỏng từ số liệu và nguồn đã lưu. Chưa có dữ liệu để kết luận về năng suất.", sourceRefs: [], metricKeys: ["statusCounts"], quotes: [] }], reportInput);
+        return { proposal: proposal as AiOutputByKind[K], aiMode: "mock" };
+      }
       case "planner": {
         const raw = generateMockPlanner(input as PlanningAiInput);
         const proposal = validatePlannerProposal(raw) as AiOutputByKind[K];

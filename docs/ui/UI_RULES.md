@@ -1,5 +1,7 @@
 # Quy tắc Giao diện & Trải nghiệm Người dùng (UI/UX Rules) — TeamFlow AI
 
+> Mở rộng Coordinator V2 07/11/2026: P07 có chat raw/check-in/inbox/lịch; P08 có report tuần/trước họp draft/publish. Không thêm trang settings/calendar độc lập. Trạng thái lưu tin tách phân tích AI, reminder template gắn Hệ thống, chỉ nội dung AI có nhãn real/mock. Draft chỉ leader; share có xác nhận. Giữ design tokens và các bất biến phía dưới. Hợp đồng ghép UI: [COORDINATOR_FRONTEND_HANDOFF](../COORDINATOR_FRONTEND_HANDOFF.md).
+
 > [!IMPORTANT]
 > **Tài liệu bắt buộc tuân thủ trong phiên triển khai giao diện.**
 > Mọi thành viên (TV1, TV2, TV3) khi triển khai mã nguồn giao diện phải đối chiếu và tuân thủ các quy tắc trong tài liệu này. Không tự ý thay đổi màu sắc, thêm trang ngoài phạm vi, hoặc tự động hóa các hành vi vi phạm ranh giới kiểm soát của con người.
