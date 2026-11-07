@@ -1,3 +1,4 @@
+import { assertSameOrigin } from "@/server/http/errors";
 import { handleDeliveryApiError } from "@/features/delivery/server/api-response";
 import { getDeliverySession } from "@/features/delivery/server/auth-helper";
 import { deliveryService } from "@/features/delivery/server/service";
@@ -21,6 +22,7 @@ export async function POST(
   { params }: { params: Promise<{ submissionId: string }> },
 ): Promise<Response> {
   try {
+    assertSameOrigin(request);
     const { submissionId } = await params;
     const session = await getDeliverySession(request);
     const idempotencyKey = request.headers.get("Idempotency-Key") || "";

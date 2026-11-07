@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
+import { requestKey } from "@/features/tracking/components/client-data";
 import type { Review } from "@/contracts/review";
 import type { Submission } from "@/contracts/submission";
 import type { Task } from "@/contracts/task";
@@ -17,16 +18,17 @@ export function ReviewPanel({
   submission,
   review,
   onReviewUpdated,
-  canRequestReview = true,
+  canRequestReview = false,
 }: ReviewPanelProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const retry = useRef<{ input: string; key: string } | null>(null);
 
   async function handleRequestReview() {
     setIsLoading(true);
     setError(null);
 
-    const idempotencyKey = `review_${submission.id}_${Date.now()}`;
+    const idempotencyKey = requestKey(retry, { submissionId: submission.id });
 
     try {
       const res = await fetch(`/api/submissions/${encodeURIComponent(submission.id)}/review`, {

@@ -1,14 +1,30 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import type { SourceRef } from "@/contracts/report";
 
 interface ReportSourcesDrawerProps {
+  reportId: string;
   sourceRef: SourceRef | null;
   onClose: () => void;
 }
 
-export function ReportSourcesDrawer({ sourceRef, onClose }: ReportSourcesDrawerProps) {
+export function ReportSourcesDrawer({ reportId, sourceRef, onClose }: ReportSourcesDrawerProps) {
+  const [content, setContent] = useState<{ key: string; text: string } | null>(null);
+  const sourceKey = `${reportId}:${sourceRef?.entity}:${sourceRef?.id}`;
+  useEffect(() => {
+    if (!sourceRef) return;
+    const abort = new AbortController();
+    const query = new URLSearchParams({ entity: sourceRef.entity, sourceId: sourceRef.id });
+    fetch(`/api/reports/${encodeURIComponent(reportId)}?${query}`, { signal: abort.signal })
+      .then(async response => {
+        const body = await response.json();
+        if (!response.ok) throw new Error(body.error?.message ?? "Không thể đọc nguồn.");
+        return JSON.stringify(body.data, null, 2);
+      }).then(text => setContent({ key: sourceKey, text }))
+      .catch(error => { if (!abort.signal.aborted) setContent({ key: sourceKey, text: error instanceof Error ? error.message : "Không thể đọc nguồn." }); });
+    return () => abort.abort();
+  }, [reportId, sourceRef, sourceKey]);
   if (!sourceRef) return null;
 
   return (
@@ -42,8 +58,9 @@ export function ReportSourcesDrawer({ sourceRef, onClose }: ReportSourcesDrawerP
             <div className="font-mono text-xs text-[var(--color-text-primary)]">{sourceRef.id}</div>
           </div>
           <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">
-            Dữ liệu nguồn được chụp lại tại mốc asOf của báo cáo tuần để đảm bảo tính nhất quán lịch sử và không bị sai lệch khi công việc thay đổi trạng thái sau đó.
+            Chỉ số và danh sách nguồn thuộc mốc chụp báo cáo đã lưu. Nội dung dưới đây là bản ghi nguồn hiện tại; trạng thái task có thể thay đổi sau mốc chụp.
           </p>
+          <pre className="max-h-80 overflow-auto whitespace-pre-wrap break-all text-xs">{content?.key === sourceKey ? content.text : "Đang đọc nguồn..."}</pre>
         </div>
 
         <div className="flex justify-end pt-2">

@@ -19,8 +19,8 @@ interface DeliveryWorkspaceProps {
 
 export function DeliveryWorkspace({
   task: initialTask,
-  canAccept = true,
-  canSubmit = true,
+  canAccept = false,
+  canSubmit = false,
   onTaskUpdated,
   onDirtyChange,
 }: DeliveryWorkspaceProps) {
@@ -39,14 +39,17 @@ export function DeliveryWorkspace({
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
   const [review, setReview] = useState<Review | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // Load submissions cho task
   useEffect(() => {
     let isMounted = true;
     async function loadData() {
       setIsLoading(true);
+      setLoadError(null);
       try {
         const res = await fetch(`/api/tasks/${encodeURIComponent(task.id)}/submissions`);
+        if (!res.ok) throw new Error("Không thể tải lịch sử bài nộp. Vui lòng tải lại công việc.");
         if (res.ok) {
           const body = await res.json();
           const subs: Submission[] = body.data || [];
@@ -58,7 +61,7 @@ export function DeliveryWorkspace({
           }
         }
       } catch (err) {
-        console.error("Lỗi nạp submissions:", err);
+        if (isMounted) setLoadError(err instanceof Error ? err.message : "Không thể tải bài nộp.");
       } finally {
         if (isMounted) setIsLoading(false);
       }
@@ -79,12 +82,13 @@ export function DeliveryWorkspace({
     async function loadReview() {
       try {
         const res = await fetch(`/api/submissions/${encodeURIComponent(selectedSubmission!.id)}/review`);
+        if (!res.ok) throw new Error("Không thể tải nhận xét. Vui lòng tải lại công việc.");
         if (res.ok) {
           const body = await res.json();
           if (isMounted) setReview(body.data);
         }
       } catch (err) {
-        console.error("Lỗi nạp review:", err);
+        if (isMounted) setLoadError(err instanceof Error ? err.message : "Không thể tải nhận xét.");
       }
     }
 
@@ -120,6 +124,7 @@ export function DeliveryWorkspace({
 
   return (
     <div className="space-y-6">
+      {loadError && <p role="alert">{loadError}</p>}
       {/* Criteria Checklist Header */}
       <div className="rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-surface)] p-4 shadow-xs">
         <h3 className="mb-2 text-base font-semibold text-[var(--color-text-primary)]">

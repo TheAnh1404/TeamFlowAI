@@ -13,7 +13,7 @@ Repository hiện đã hoàn tất phiên **Khởi tạo khung kiến trúc nề
 - Đã cấu hình bộ token màu sắc, typography và trạng thái công việc tại `src/app/globals.css`.
 - Đã tạo các route handler API stub trả về mã **HTTP 501 Not Implemented** theo hợp đồng thiết kế.
 - Đã cấu hình điểm nối cơ sở dữ liệu **Neon PostgreSQL** qua Drizzle ORM theo cơ chế khởi tạo lười (Lazy connection).
-- **Cập nhật phiên TV2**: Đã triển khai schema/migration Neon, session demo có mã truy cập phía server, quyền theo membership, danh sách dự án/task, chi tiết task và chat/làm rõ cập nhật. Seed chỉ tạo ba tài khoản TV1/TV2/TV3, không tạo dự án/task sản phẩm.
+- **Cập nhật phiên TV2**: Đã triển khai schema/migration Neon, session demo bằng lựa chọn TV1/TV2/TV3 không cần mã truy cập, quyền theo membership, danh sách dự án/task, chi tiết task và chat/làm rõ cập nhật. Seed chỉ tạo ba tài khoản TV1/TV2/TV3, không tạo dự án/task sản phẩm.
 - Planning của TV1 và delivery/review/report/AI provider của TV3 vẫn chưa triển khai. Coordinator mặc định dùng quy tắc demo có nhãn `mock`; không phải AI thật và không tự chuyển sang mock khi AI lỗi.
 - Kết quả kiểm tra, giới hạn và entry bàn giao hiện hành: [TV2_HANDOFF](docs/TV2_HANDOFF.md). Phần mô tả scaffold bên trên là nền đã có từ phiên trước.
 
@@ -97,13 +97,17 @@ Khi bắt đầu phiên triển khai nghiệp vụ, thành viên cần cấu hì
    ```env
    DATABASE_URL=
    DATABASE_DIRECT_URL=
-   DEMO_ACCESS_CODE=
+   ENABLE_DEMO_AUTH=true
    COORDINATOR_MODE=mock
    OPENAI_API_KEY=
    OPENAI_MODEL=
    ```
 
-Điền URL và mã truy cập riêng trong `.env.local`; không đưa giá trị thật vào Git hoặc log. `DEMO_ACCESS_CODE` tối thiểu 16 ký tự. Một mã riêng đã được tạo trong file local của phiên này; mở file riêng để lấy mã rồi vào `/app`, chọn TV1/TV2/TV3 để thiết lập session. Đây là xác thực demo của nhóm, chưa phải hệ thống tài khoản production.
+Điền URL riêng trong `.env.local`; không đưa giá trị thật vào Git hoặc log. Vào `/app`, chọn TV1/TV2/TV3 để thiết lập session, không cần mã truy cập. Đây là xác thực demo của nhóm, chưa phải hệ thống tài khoản production.
+
+Đăng nhập demo cần bật rõ `ENABLE_DEMO_AUTH=true` trong cấu hình local. `.env.example` mặc định để `false`. Sau khi đổi biến môi trường, khởi động lại `npm run dev` nếu server chưa tự nạp lại. Thông báo “Đăng nhập demo chưa được bật trên server” là HTTP 403 do cờ này chưa bật, không phải 404 thiếu route.
+
+Nếu sau đó gặp HTTP 500 vì Neon còn foundation cũ dùng cột `display_name`/`token_hash`, xem mục nâng cấp legacy trong [TV2_HANDOFF](docs/TV2_HANDOFF.md). Phiên sửa lỗi đăng nhập đã đồng bộ database Neon của môi trường chạy hiện tại với schema bằng transaction, giữ nguyên tài khoản/session. Không reset DB hoặc chạy lại migration tạo bảng đầu tiên lên schema cũ.
 
 Lệnh TV2:
 

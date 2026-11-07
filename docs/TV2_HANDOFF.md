@@ -38,8 +38,26 @@ Phạm vi: phần TV2 theo [nhiệm vụ](tasks/TV2_TRACKING.md), [AGENTS](../AG
 1. Cấu hình `DATABASE_URL` pooled và `DATABASE_DIRECT_URL` direct trong `.env.local`; không gửi credentials vào chat hoặc commit.
 2. TV2 là người duy nhất chạy `npm run db:migrate` trên DB chung. Đọc SQL trước khi áp dụng; không dùng `push`/wipe/reset database.
 3. Chạy `npm run db:seed`: chỉ thêm `demo-tv1`, `demo-tv2`, `demo-tv3` nếu chưa có; không tạo project/plan/task được công bố giả.
-4. Bật `ENABLE_DEMO_AUTH=true`, đặt `DEMO_ACCESS_CODE` tối thiểu 16 ký tự. Mã này là quyền truy cập chế độ demo có chủ ý; mọi người biết mã có thể chọn ba danh tính demo.
-5. Tại `/app`, nhập mã và chọn TV1/TV2/TV3. Nhãn trong bộ chọn là vai trò gợi ý của dữ liệu demo; quyền thực tế luôn từ ProjectMember của từng project.
+4. Bật `ENABLE_DEMO_AUTH=true`; chế độ demo không yêu cầu mã truy cập.
+5. Tại `/app`, chọn TV1/TV2/TV3 rồi vào phiên demo. Nhãn trong bộ chọn là vai trò gợi ý của dữ liệu demo; quyền thực tế luôn từ ProjectMember của từng project.
+
+### Sửa lỗi đăng nhập và nâng cấp foundation cũ
+
+- “Đăng nhập demo chưa được bật trên server” là HTTP **403**, do thiếu `ENABLE_DEMO_AUTH=true`, không phải 404. Cờ chỉ bật trong `.env.local` của môi trường demo được yêu cầu; `.env.example` tiếp tục mặc định false. Đã bỏ yêu cầu mã truy cập theo yêu cầu hiện tại; session và kiểm tra quyền theo project được giữ nguyên.
+- Sau khi bật cờ, phát hiện HTTP 500 do Neon còn cột snake_case của `0000_tracking_foundation.sql`, trong khi bản code hiện tại dùng cột camelCase và một số field JSONB. Không sửa ORM bằng alias tạm hoặc xóa/tạo lại bảng.
+- `scripts/upgrade-legacy-database.mjs` cùng helper `scripts/lib/legacy-schema-upgrade.mjs` nhận diện đúng hash migration cũ; chỉ hỗ trợ foundation chưa có dữ liệu nghiệp vụ. Có project/task/message/mutation hoặc lịch sử không nhận diện thì dừng để review riêng.
+- Script dùng một transaction và khóa các bảng, đổi tên cột/bảng kỹ thuật, chuyển array sang JSONB, bổ sung constraints/invariants của bộ migration hiện hành. Giữ nguyên User/session và kiểm tra số bản ghi trước/sau. Lịch sử foundation cũ được giữ; chỉ ghi nhận baseline hiện hành sau khi toàn bộ chuyển đổi tương đương và hai migration tiếp theo thành công.
+- Các cột/constraints legacy bổ sung được giữ để tránh xóa dữ liệu. TV2 cần xét chúng khi làm thay đổi schema tiếp theo; script này không thay thế cơ chế migration thường xuyên.
+
+```bash
+# Chỉ tạo kế hoạch tại .cache/legacy-schema-upgrade/plan.sql, chưa đổi schema
+npm run db:upgrade-legacy
+# Chỉ áp dụng khi đúng foundation cũ, chưa có dữ liệu nghiệp vụ
+npm run db:upgrade-legacy -- --apply
+npm run test:legacy-schema
+```
+
+Database Neon của phiên sửa lỗi đã được nâng cấp thành công, bảo toàn 3 User và 1 session trước đó; không reset dữ liệu, không tạo project/task. Kiểm tra thực tế: đăng nhập TV2, GET session, GET projects và GET `/app` đều HTTP 200; session do kiểm tra tạo được đăng xuất riêng. Ba kiểm tra regression bao phủ preview, bảo toàn/idempotence, từ chối dữ liệu nghiệp vụ và lịch sử lạ. Database mới dùng migration chuẩn, không chạy script legacy.
 
 ## Interface bàn giao TV1
 - `src/server/auth`: `requireSession()`, `sessionProvider`, `authorizationProvider`. Helpers đọc lại membership phía DB.

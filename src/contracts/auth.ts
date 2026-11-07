@@ -6,7 +6,6 @@ export const demoAccountSchema = z.enum(["TV1", "TV2", "TV3"]);
 export const sessionSchema = z.object({ user: userSchema, memberships: z.array(projectMemberSchema) });
 export const createDemoSessionInputSchema = z.object({
   demoAccount: demoAccountSchema,
-  accessCode: z.string(),
 }).strict();
 
 export type SessionData = z.infer<typeof sessionSchema>;

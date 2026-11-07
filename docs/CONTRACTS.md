@@ -413,7 +413,7 @@ Giữ nguyên các field/enum gốc. Những API bổ sung dưới phục vụ P
 
 | Method/path | Owner | Quyền | Request → data response | Lỗi chính |
 |---|---|---|---|---|
-| `POST /api/session` | TV2 | Biết mã truy cập demo của server | `{demoAccount: "TV1" \| "TV2" \| "TV3", accessCode: string}` → `{user: User, memberships: ProjectMember[]}`; cookie opaque HttpOnly | 401 mã sai; 422 body sai; 503 cấu hình/seed thiếu |
+| `POST /api/session` | TV2 | Server bật `ENABLE_DEMO_AUTH=true`; cùng origin | `{demoAccount: "TV1" \| "TV2" \| "TV3"}` (chấp nhận alias `account`) → `{user: User, memberships: ProjectMember[]}`; cookie opaque HttpOnly | 403 demo tắt/khác origin; 422 body sai; 409 seed thiếu; 503 DB lỗi |
 | `DELETE /api/session` | TV2 | Cookie hiện hành; kiểm tra cùng origin | Không body → `{signedOut: true}`, thu hồi session hiện hành | 403 khác origin; 503 DB lỗi |
 | `GET /api/projects` | TV2 | Session hợp lệ | Không body → `ProjectSummary[]` chỉ project có membership | 401/503 |
 | `GET /api/projects/:projectId/members` | TV2 | Member của project | Không body → `ProjectMember[]` | 401/404/503 |
@@ -422,7 +422,7 @@ Giữ nguyên các field/enum gốc. Những API bổ sung dưới phục vụ P
 
 `GET /api/projects/:projectId/tasks` trả `TaskListItem[]`: giữ toàn bộ Task và thêm `latestProgressUpdate: ProgressUpdate|null`. Đây là read model tương thích để hiển thị blocker/cập nhật gần nhất, không thêm field vào entity Task hay tạo trạng thái mới. `GET /api/tasks/:taskId` vẫn trả Task gốc.
 
-Session demo không có global role. Server kiểm tra `DEMO_ACCESS_CODE`, chỉ ánh xạ ba `demoAccount` đã seed, lưu hash token ngẫu nhiên cùng hạn 8 giờ; quyền luôn đọc ProjectMember mới nhất. Không nhận role/userId từ client làm danh tính. Mọi mutation kiểm tra origin; đây là xác thực demo, chưa phải đăng nhập production.
+Session demo không có global role và không yêu cầu mã truy cập. Server kiểm tra `ENABLE_DEMO_AUTH=true`, chỉ ánh xạ ba `demoAccount` đã seed, lưu hash token ngẫu nhiên cùng hạn 8 giờ; quyền luôn đọc ProjectMember mới nhất. Không nhận role/userId từ client làm danh tính. Mọi mutation kiểm tra origin; đây là xác thực demo, chưa phải đăng nhập production.
 
 Giới hạn đã dùng: request JSON tối đa 32 KB; chat/blocker tối đa 5.000 ký tự; taskId tối đa 200 ký tự khi mutation; `Idempotency-Key` 8–128 ký tự chữ/số/gạch nối/gạch dưới. Body mutation strict, không chấp nhận field userId/role thừa. Xử lý key hiện chỉ được triển khai cho tracking; TV1/TV3 phải nối helper khi thực hiện API của mình.
 

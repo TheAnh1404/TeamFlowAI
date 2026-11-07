@@ -13,7 +13,7 @@ import { createAuthorizationProvider } from "../src/server/auth/access";
 import { createDemoSession, findSession, revokeSession } from "../src/server/auth/session";
 import { commitMutation, mutationIdentity } from "../src/server/db/mutations";
 import { endpoint, HttpError, readJson } from "../src/server/http/errors";
-import { submitProgressMessageInputSchema, type Task } from "../src/contracts";
+import { createDemoSessionInputSchema, submitProgressMessageInputSchema, type Task } from "../src/contracts";
 import { readReportSnapshot } from "../src/server/db/report-snapshot";
 import type { AiProvider } from "../src/server/ai/contracts";
 import type { Session } from "../src/server/auth/contracts";
@@ -23,7 +23,6 @@ const db = drizzle(pg, { schema }) as unknown as Database;
 const now = new Date().toISOString();
 const deadline = new Date(Date.now() + 86400000).toISOString();
 let leader: Session, assignee: Session, reviewer: Session;
-const code = "local-test-code-at-least-16";
 before(async () => {
   const journal = JSON.parse(await readFile("drizzle/meta/_journal.json", "utf8")) as { entries: { tag: string }[] };
   for (const entry of journal.entries) await pg.exec(await readFile(`drizzle/${entry.tag}.sql`, "utf8"));
@@ -63,15 +62,17 @@ test("migration + seed are usable; roles are read from DB, not cached/client mem
   await auth.assertAcceptanceAllowed(reviewer, t.id);
   await assert.rejects(auth.assertAcceptanceAllowed(assignee, t.id), codeIs("FORBIDDEN"));
 });
-test("opaque expiring sessions, protected demo selection, rotation and revocation", async () => {
-  process.env.ENABLE_DEMO_AUTH = "false"; process.env.DEMO_ACCESS_CODE = code;
-  await assert.rejects(createDemoSession(db, "TV2", code), codeIs("FORBIDDEN"));
+test("demo selection without access code, opaque expiring sessions, rotation and revocation", async () => {
+  assert.deepEqual(createDemoSessionInputSchema.parse({ demoAccount: "TV2" }), { demoAccount: "TV2" });
+  assert.equal(createDemoSessionInputSchema.safeParse({ demoAccount: "TV4" }).success, false);
+  assert.equal(createDemoSessionInputSchema.safeParse({ demoAccount: "TV2", userId: "demo-tv1", role: "leader" }).success, false);
+  process.env.ENABLE_DEMO_AUTH = "false";
+  await assert.rejects(createDemoSession(db, "TV2"), codeIs("FORBIDDEN"));
   process.env.ENABLE_DEMO_AUTH = "true";
-  await assert.rejects(createDemoSession(db, "TV2", "invalid-access-code"), codeIs("FORBIDDEN"));
   assert.equal(await findSession(db, "demo-tv1"), null);
-  const first = await createDemoSession(db, "TV2", code);
+  const first = await createDemoSession(db, "TV2");
   assert.equal((await findSession(db, first.token))?.user.id, assignee.user.id);
-  const second = await createDemoSession(db, "TV3", code, first.token);
+  const second = await createDemoSession(db, "TV3", first.token);
   assert.equal(await findSession(db, first.token), null);
   await db.update(schema.sessions).set({ expiresAt: "2020-01-01T00:00:00.000Z" });
   assert.equal(await findSession(db, second.token), null);

@@ -17,7 +17,6 @@ export const POST = (request: Request) =>
         .object({
           account: z.enum(["TV1", "TV2", "TV3"]).optional(),
           demoAccount: z.enum(["TV1", "TV2", "TV3"]).optional(),
-          accessCode: z.string().min(16).max(256),
         })
         .strict()
     );
@@ -25,7 +24,7 @@ export const POST = (request: Request) =>
     const account = input.account ?? input.demoAccount;
     assert(account !== undefined, 422, "VALIDATION_ERROR", "Thiếu tài khoản demo.");
     const jar = await cookies();
-    const { token, expiresAt } = await createDemoSession(getDb(), account, input.accessCode, jar.get(SESSION_COOKIE)?.value);
+    const { token, expiresAt } = await createDemoSession(getDb(), account, jar.get(SESSION_COOKIE)?.value);
     jar.set(SESSION_COOKIE, token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",

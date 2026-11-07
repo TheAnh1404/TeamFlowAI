@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
+import { requestKey } from "@/features/tracking/components/client-data";
 import type { SubmissionContentType } from "@/contracts/enums";
 import type { Task } from "@/contracts/task";
 import type { SubmitWorkResult } from "@/contracts/submission";
@@ -17,6 +18,7 @@ export function SubmissionForm({ task, onSubmitted, disabled = false, onDirtyCha
   const [content, setContent] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const retry = useRef<{ input: string; key: string } | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -25,7 +27,7 @@ export function SubmissionForm({ task, onSubmitted, disabled = false, onDirtyCha
     setIsSubmitting(true);
     setError(null);
 
-    const idempotencyKey = `submit_${task.id}_${task.version}_${Date.now()}`;
+    const idempotencyKey = requestKey(retry, { taskId: task.id, contentType, content, expectedTaskVersion: task.version });
 
     try {
       const res = await fetch(`/api/tasks/${encodeURIComponent(task.id)}/submissions`, {
@@ -47,6 +49,7 @@ export function SubmissionForm({ task, onSubmitted, disabled = false, onDirtyCha
       }
 
       setContent("");
+      retry.current = null;
       onDirtyChange?.(false);
       onSubmitted(body.data);
     } catch (err: unknown) {
@@ -137,7 +140,7 @@ export function SubmissionForm({ task, onSubmitted, disabled = false, onDirtyCha
           disabled={disabled || isSubmitting || !content.trim()}
           className="inline-flex items-center justify-center rounded-md bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-on-primary)] transition-colors hover:bg-[var(--color-primary-hover)] disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {isSubmitting ? "Đang nộp & chuyển trạng thái..." : "Nộp bài & Yêu cầu Review"}
+          {isSubmitting ? "Đang nộp bài..." : "Nộp bài"}
         </button>
       </div>
     </form>

@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { SourceRef, WeeklyReport } from "@/contracts/report";
+import { loadContext, requestKey } from "@/features/tracking/components/client-data";
 import { routes } from "@/lib/routes";
 import { formatIsoDate } from "@/lib/utils";
 import { ReportSourcesDrawer } from "./ReportSourcesDrawer";
@@ -12,6 +13,9 @@ interface WeeklyReportViewProps {
 }
 
 export function WeeklyReportView({ projectId }: WeeklyReportViewProps) {
+  const retry = useRef<{ input: string; key: string } | null>(null);
+  const snapshotEnd = useRef(new Date().toISOString());
+  const [canGenerate, setCanGenerate] = useState(false);
   const [reports, setReports] = useState<WeeklyReport[]>([]);
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -34,6 +38,8 @@ export function WeeklyReportView({ projectId }: WeeklyReportViewProps) {
       setIsLoading(true);
       setError(null);
       try {
+        const context = await loadContext(projectId);
+        if (isMounted) setCanGenerate(context.members.some(m => m.userId === context.session.user.id && m.role === "leader"));
         const res = await fetch(`/api/projects/${encodeURIComponent(projectId)}/reports`);
         if (!res.ok) throw new Error("Không thể tải danh sách báo cáo tuần.");
         const body = await res.json();
@@ -63,7 +69,8 @@ export function WeeklyReportView({ projectId }: WeeklyReportViewProps) {
     setIsGenerating(true);
     setError(null);
 
-    const idempotencyKey = `report_${projectId}_${Date.now()}`;
+    const reportPeriod = { periodStart: new Date(periodStart + "T00:00:00+07:00").toISOString(), periodEnd: new Date(Math.min(Date.parse(periodEnd + "T00:00:00+07:00") + 86400000, Date.parse(snapshotEnd.current))).toISOString() };
+    const idempotencyKey = requestKey(retry, { projectId, ...reportPeriod });
 
     try {
       const res = await fetch(`/api/projects/${encodeURIComponent(projectId)}/reports`, {
@@ -73,8 +80,7 @@ export function WeeklyReportView({ projectId }: WeeklyReportViewProps) {
           "Idempotency-Key": idempotencyKey,
         },
         body: JSON.stringify({
-          periodStart: new Date(periodStart).toISOString(),
-          periodEnd: new Date(periodEnd + "T23:59:59.999Z").toISOString(),
+          ...reportPeriod,
         }),
       });
 
@@ -161,6 +167,7 @@ export function WeeklyReportView({ projectId }: WeeklyReportViewProps) {
 
         <button
           type="button"
+          disabled={!canGenerate || isLoading}
           onClick={() => setShowCreateModal(true)}
           className="inline-flex items-center justify-center rounded-md bg-[var(--color-primary)] px-4 py-2 text-xs font-semibold text-[var(--color-on-primary)] transition-colors hover:bg-[var(--color-primary-hover)] shadow-xs"
         >
@@ -292,67 +299,13 @@ export function WeeklyReportView({ projectId }: WeeklyReportViewProps) {
             </div>
           </div>
 
-          {/* Member Activity Table */}
-          <div className="rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-surface)] p-6 shadow-xs">
-            <h2 className="mb-4 text-base font-bold text-[var(--color-text-primary)]">
-              3. Bảng hoạt động thành viên trong kỳ
-            </h2>
-            <div className="overflow-x-auto rounded-md border border-[var(--color-border-subtle)]">
-              <table className="w-full text-left text-sm">
-                <thead className="bg-[var(--color-surface-subtle)] text-xs font-semibold text-[var(--color-text-secondary)]">
-                  <tr>
-                    <th className="p-3">Thành viên</th>
-                    <th className="p-3">Việc đã nghiệm thu</th>
-                    <th className="p-3">Việc chờ review</th>
-                    <th className="p-3">Trở ngại ghi nhận</th>
-                    <th className="p-3">Cập nhật trong kỳ</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[var(--color-border-subtle)] text-xs">
-                  <tr className="hover:bg-[var(--color-surface-subtle)]">
-                    <td className="p-3 font-semibold text-[var(--color-text-primary)]">
-                      Lê Thành Viên 3 (TV3)
-                    </td>
-                    <td className="p-3 text-[var(--color-status-done-fg)] font-medium">
-                      {selectedReport.metrics.acceptedOnTimeTotal > 0 ? "1 việc" : "—"}
-                    </td>
-                    <td className="p-3 text-[var(--color-status-in-review-fg)] font-medium">
-                      {selectedReport.metrics.statusCounts.in_review > 0 ? "1 việc (t1)" : "—"}
-                    </td>
-                    <td className="p-3 text-[var(--color-status-blocked-fg)] font-medium">
-                      {selectedReport.metrics.statusCounts.blocked > 0 ? "Có trở ngại" : "Không có"}
-                    </td>
-                    <td className="p-3 text-[var(--color-text-muted)]">
-                      {selectedReport.metrics.submissionsInPeriodTotal > 0
-                        ? `Có ${selectedReport.metrics.submissionsInPeriodTotal} bài nộp`
-                        : "Chưa có dữ liệu trong kỳ"}
-                    </td>
-                  </tr>
-                  <tr className="hover:bg-[var(--color-surface-subtle)]">
-                    <td className="p-3 font-semibold text-[var(--color-text-primary)]">
-                      Trần Thành Viên 2 (TV2)
-                    </td>
-                    <td className="p-3 text-[var(--color-text-muted)]">—</td>
-                    <td className="p-3 text-[var(--color-text-muted)]">—</td>
-                    <td className="p-3 text-[var(--color-text-muted)]">Không có</td>
-                    <td className="p-3 text-[var(--color-text-muted)]">
-                      <span className="inline-flex items-center gap-1 text-[var(--color-text-muted)]">
-                        ⚪ Chưa có dữ liệu trong kỳ
-                      </span>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-            <p className="mt-2 text-[11px] italic text-[var(--color-text-muted)]">
-              * Ghi chú: &ldquo;Chưa có dữ liệu trong kỳ&rdquo; là trạng thái trung tính thể hiện không phát sinh lượt nộp hay tin nhắn trong khoảng xét duyệt, không đánh giá năng lực hay thái độ làm việc.
-            </p>
-          </div>
+
         </div>
       )}
 
       {/* Drawer xem chi tiết nguồn dẫn chứng */}
       <ReportSourcesDrawer
+        reportId={selectedReport?.id ?? ""}
         sourceRef={activeSourceRef}
         onClose={() => setActiveSourceRef(null)}
       />

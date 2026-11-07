@@ -18,7 +18,10 @@
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "node --conditions=react-server --import tsx scripts/seed.ts",
     "db:seed:mjs": "node scripts/db-seed.mjs",
+    "db:upgrade-legacy": "node scripts/upgrade-legacy-database.mjs",
+    "test:legacy-schema": "node --test --test-isolation=none scripts/tests/legacy-schema-upgrade.test.mjs",
     "test": "node --conditions=react-server --import tsx --test tests/*.test.ts",
+    "test:managed": "node --conditions=react-server --import ./scripts/register-test-typescript.mjs --test --test-isolation=none tests/*.test.ts",
     "test:ui": "tsx tests/browser/run.ts",
     "test:tracking": "node --test --test-isolation=none src/features/tracking/tests/policy.test.mjs src/features/tracking/tests/security.test.mjs",
     "test:tracking:integration": "node scripts/test-tracking-integration.mjs"

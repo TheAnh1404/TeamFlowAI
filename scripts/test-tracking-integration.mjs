@@ -9,7 +9,7 @@ import { mutationIdentity } from "../src/server/db/idempotency-key.ts";
 env.loadEnvConfig(process.cwd());
 const base = new URL(process.env.TV2_TEST_BASE_URL ?? "http://localhost:3000");
 if (!["localhost", "127.0.0.1"].includes(base.hostname)) throw new Error("Integration checks only target a local server.");
-if (!process.env.DATABASE_URL || !process.env.DEMO_ACCESS_CODE) throw new Error("Cần cấu hình Neon và mã truy cập demo.");
+if (!process.env.DATABASE_URL) throw new Error("Cần cấu hình Neon.");
 if ((process.env.COORDINATOR_MODE ?? "mock") !== "mock") throw new Error("Bộ kiểm tra quy tắc demo cần COORDINATOR_MODE=mock.");
 const connection = neon(process.env.DATABASE_URL);
 const sql = {
@@ -108,11 +108,11 @@ try {
     assert.equal((await request("/api/projects/" + p + "/tasks")).status, 401);
   });
   await check("client tự khai role/userId không tạo session", async () => {
-    const result = await request("/api/session", { method:"POST", body:{demoAccount:"TV2",accessCode:process.env.DEMO_ACCESS_CODE,userId:"demo-tv1",role:"leader"} });
+    const result = await request("/api/session", { method:"POST", body:{demoAccount:"TV2",userId:"demo-tv1",role:"leader"} });
     assert.equal(result.status,422);
   });
   for (const account of ["TV2","TV3"]) {
-    const result = await request("/api/session", { method:"POST", account, body:{demoAccount:account,accessCode:process.env.DEMO_ACCESS_CODE} });
+    const result = await request("/api/session", { method:"POST", account, body:{demoAccount:account} });
     assert.equal(result.status,200);
     assert.ok(result.cookie);
     jars.set(account,result.cookie);

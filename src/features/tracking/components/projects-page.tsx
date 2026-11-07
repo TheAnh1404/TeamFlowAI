@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useRef, useState, type FormEvent } from "react";
+import { useCallback, useState, type FormEvent } from "react";
 import { z } from "zod";
 import { projectSummarySchema, sessionSchema, type SessionData } from "@/contracts";
 import { ApiClientError, apiFetch } from "@/lib/api-client";
@@ -13,7 +13,6 @@ import styles from "./tracking.module.css";
 export function ProjectsPage() {
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const codeRef = useRef<HTMLInputElement>(null);
   const loader = useCallback(async () => {
     let session: SessionData;
     try { session = (await apiFetch(apiRoutes.tracking.session, sessionSchema)).data; }
@@ -28,8 +27,7 @@ export function ProjectsPage() {
     const form = new FormData(event.currentTarget);
     setPending(true); setMessage(null);
     try {
-      await apiFetch(apiRoutes.tracking.session, sessionSchema, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ demoAccount: form.get("demoAccount"), accessCode: form.get("accessCode") }) });
-      if (codeRef.current) codeRef.current.value = "";
+      await apiFetch(apiRoutes.tracking.session, sessionSchema, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ demoAccount: form.get("demoAccount") }) });
       state.reload();
     } catch (error) { setMessage(error instanceof Error ? error.message : "Không thể thiết lập phiên."); }
     finally { setPending(false); }
@@ -43,10 +41,9 @@ export function ProjectsPage() {
   return <main className={styles.workspace}>
     <nav className={styles.tabs}><Link href={routes.home}>Trang chủ</Link></nav>
     <h1>Dự án của nhóm</h1>
-    <p className={styles.subtitle}>Phiên demo chỉ dành cho nhóm có mã truy cập. Quyền trưởng nhóm/thành viên được xác định riêng trong từng dự án.</p>
+    <p className={styles.subtitle}>Chọn TV1/TV2/TV3 để vào phiên demo. Quyền trưởng nhóm/thành viên được xác định riêng trong từng dự án.</p>
     <form onSubmit={signIn} className={styles.toolbar} aria-label="Thiết lập phiên demo">
       <div className={styles.field}><label htmlFor="demo-account">Tài khoản demo</label><select className={styles.select} id="demo-account" name="demoAccount" disabled={pending}><option>TV1</option><option>TV2</option><option>TV3</option></select></div>
-      <div className={styles.field}><label htmlFor="demo-code">Mã truy cập demo</label><input ref={codeRef} className={styles.input} id="demo-code" name="accessCode" type="password" required autoComplete="off" maxLength={256} disabled={pending} /></div>
       <button className={styles.button + " " + styles.primary} disabled={pending}>{pending ? "Đang xử lý…" : "Thiết lập / đổi phiên demo"}</button>
     </form>
     {message && <p role="alert" className={styles.notice + " " + styles.error}>{message}</p>}

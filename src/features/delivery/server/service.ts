@@ -1,23 +1,23 @@
 import "server-only";
-import type {
-  ConfirmAcceptanceInput, GenerateWeeklyReportInput, Id, MutationOptions,
-  ReportMetrics, RequestReviewResult, Review, SourceRef, Submission,
-  SubmitWorkInput, SubmitWorkResult, Task, WeeklyReport,
+import { randomUUID } from "node:crypto";
+import { desc, eq, sql } from "drizzle-orm";
+import {
+  confirmAcceptanceInputSchema, generateWeeklyReportInputSchema, submitWorkInputSchema,
+  type ConfirmAcceptanceInput, type GenerateWeeklyReportInput, type Id, type MutationOptions,
+  type RequestReviewResult, type Review, type Submission, type SubmitWorkInput,
+  type SubmitWorkResult, type Task, type WeeklyReport, type ReportMetrics, type SourceRef, sourceRefSchema,
 } from "@/contracts";
 import { aiProvider } from "@/server/ai";
+import type { AiProvider, ReportAiInput } from "@/server/ai/contracts";
+import { validateReportProposal, validateReviewerProposal } from "@/server/ai/validator";
+import { projectMember, taskWithMember, assertUpdater } from "@/server/auth/access";
 import type { Session } from "@/server/auth/contracts";
-import { deliveryRepository, type DeliveryRepository } from "./repository";
-
-export class DeliveryServiceError extends Error {
-  constructor(
-    public readonly status: number,
-    public readonly code: string,
-    message: string,
-  ) {
-    super(message);
-    this.name = "DeliveryServiceError";
-  }
-}
+import { getDb, type Database, type Transaction } from "@/server/db/client";
+import { mutationIdentity, replay, type MutationIdentity } from "@/server/db/mutations";
+import { readReportSnapshot } from "@/server/db/report-snapshot";
+import { mutationResults, submissions, reviews, tasks, weeklyReports, messages, progressUpdates } from "@/server/db/schema";
+import { assert, conflict, notFound } from "@/server/http/errors";
+import { findReview, listTaskSubmissions, lockDeliveryTask, submissionWithMember } from "./repository";
 
 export interface DeliveryService {
   submitWork(session: Session, taskId: Id, input: SubmitWorkInput, options: MutationOptions): Promise<SubmitWorkResult>;
@@ -28,407 +28,199 @@ export interface DeliveryService {
   generateWeeklyReport(session: Session, projectId: Id, input: GenerateWeeklyReportInput, options: MutationOptions): Promise<WeeklyReport>;
   listReports(session: Session, projectId: Id): Promise<WeeklyReport[]>;
   getReport(session: Session, reportId: Id): Promise<WeeklyReport>;
+  getReportSource(session: Session, reportId: Id, ref: SourceRef): Promise<unknown>;
 }
 
-export class DefaultDeliveryService implements DeliveryService {
-  constructor(private readonly repo: DeliveryRepository = deliveryRepository) {}
-
-  private getMemberForProject(session: Session, projectId: Id) {
-    const member = session.memberships.find((m) => m.projectId === projectId);
-    return member ?? null;
-  }
-
-  async submitWork(
-    session: Session,
-    taskId: Id,
-    input: SubmitWorkInput,
-    options: MutationOptions,
-  ): Promise<SubmitWorkResult> {
-    // 1. Kiểm tra replay Idempotency
-    if (options.idempotencyKey) {
-      const cached = await this.repo.getIdempotencyResult<SubmitWorkResult>(options.idempotencyKey);
-      if (cached) return cached;
-    }
-
-    // 2. Kiểm tra Task tồn tại
-    const task = await this.repo.getTask(taskId);
-    if (!task) {
-      throw new DeliveryServiceError(404, "NOT_FOUND", "Không tìm thấy công việc.");
-    }
-
-    // 3. Bất biến: Không thể nộp bài cho task đã 'done'
-    if (task.status === "done") {
-      throw new DeliveryServiceError(409, "INVALID_TRANSITION", "Công việc đã hoàn thành, không thể nộp bài mới.");
-    }
-
-    // 4. Kiểm tra quyền: Người phụ trách hoặc Leader
-    const member = this.getMemberForProject(session, task.projectId);
-    const isAssignee = member && member.id === task.assigneeMemberId;
-    const isLeader = member && member.role === "leader";
-
-    if (!isAssignee && !isLeader) {
-      throw new DeliveryServiceError(403, "FORBIDDEN", "Chỉ người phụ trách hoặc trưởng nhóm mới có quyền nộp bài.");
-    }
-
-    // 5. Kiểm tra version chống xung đột
-    if (task.version !== input.expectedTaskVersion) {
-      throw new DeliveryServiceError(409, "VERSION_CONFLICT", "Dữ liệu công việc đã được cập nhật bởi thao tác khác. Vui lòng tải lại.");
-    }
-
-    // 6. Tính toán revision mới
-    const currentSubmissions = await this.repo.listSubmissions(taskId);
-    const latestRevision = currentSubmissions.length > 0 ? Math.max(...currentSubmissions.map((s) => s.revision)) : 0;
-    const newRevision = latestRevision + 1;
-
-    const submissionId = `sub_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-    const nowIso = new Date().toISOString();
-
-    const submission: Submission = {
-      id: submissionId,
-      projectId: task.projectId,
-      taskId: task.id,
-      authorMemberId: member?.id ?? "unknown-member",
-      revision: newRevision,
-      contentType: input.contentType,
-      content: input.content,
-      criteriaSnapshot: task.criteria,
-      submittedAt: nowIso,
-    };
-
-    const updatedTask: Task = {
-      ...task,
-      status: "in_review",
-      version: task.version + 1,
-    };
-
-    await this.repo.commitSubmission(submission, updatedTask, input.expectedTaskVersion, options.idempotencyKey);
-    const result: SubmitWorkResult = { submission, task: updatedTask };
-
-    if (options.idempotencyKey) {
-      await this.repo.saveIdempotencyResult(options.idempotencyKey, result);
-    }
-
+// Refresh DB permissions even on replay; result and business writes commit together.
+async function mutate<T>(db: Database, identity: MutationIdentity, authorize: (tx: Transaction) => Promise<unknown>, work: (tx: Transaction) => Promise<T>): Promise<T> {
+  return db.transaction(async tx => {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${identity.scope}))`);
+    await authorize(tx);
+    const saved = await replay<T>(tx, identity);
+    if (saved !== undefined) return saved;
+    const result = await work(tx);
+    await tx.insert(mutationResults).values({ ...identity, result, createdAt: new Date().toISOString() });
     return result;
-  }
+  });
+}
 
-  async listSubmissions(session: Session, taskId: Id): Promise<Submission[]> {
-    const task = await this.repo.getTask(taskId);
-    if (!task) {
-      throw new DeliveryServiceError(404, "NOT_FOUND", "Không tìm thấy công việc.");
-    }
-    return this.repo.listSubmissions(taskId);
-  }
-
-  async requestReview(
-    session: Session,
-    submissionId: Id,
-    options: MutationOptions,
-  ): Promise<RequestReviewResult> {
-    if (options.idempotencyKey) {
-      const cached = await this.repo.getIdempotencyResult<RequestReviewResult>(options.idempotencyKey);
-      if (cached) return cached;
-    }
-
-    const submission = await this.repo.getSubmission(submissionId);
-    if (!submission) {
-      throw new DeliveryServiceError(404, "NOT_FOUND", "Không tìm thấy bài nộp.");
-    }
-
-    const task = await this.repo.getTask(submission.taskId);
-    if (!task) {
-      throw new DeliveryServiceError(404, "NOT_FOUND", "Không tìm thấy công việc liên kết với bài nộp.");
-    }
-
-    // Nếu đã có Review hợp lệ, trả lại bản cũ (Idempotent)
-    const existingReview = await this.repo.getReview(submissionId);
-    if (existingReview) {
-      return { review: existingReview, task };
-    }
-
-    // Gọi AI Reviewer
-    const aiResult = await aiProvider.generate("reviewer", { submission });
-
-    const reviewId = `rev_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-    const review: Review = {
-      id: reviewId,
-      projectId: submission.projectId,
-      taskId: submission.taskId,
-      submissionId: submission.id,
-      results: aiResult.proposal.results,
-      summary: aiResult.proposal.summary,
-      aiMode: aiResult.aiMode,
-      createdAt: new Date().toISOString(),
-    };
-
-    // Kiểm tra xem submission này có phải là revision mới nhất không
-    const allSubmissions = await this.repo.listSubmissions(submission.taskId);
-    const isLatest = allSubmissions.length === 0 || allSubmissions[0].id === submission.id;
-
-    let updatedTask: Task | null = null;
-    if (isLatest) {
-      const hasNotMet = review.results.some((r) => r.verdict === "not_met");
-      if (hasNotMet) {
-        // Có tiêu chí không đạt -> chuyển sang changes_requested
-        updatedTask = {
-          ...task,
-          status: "changes_requested",
-          version: task.version + 1,
+export function createDeliveryService(db: Database, ai: AiProvider = aiProvider): DeliveryService {
+  const updater = async (connection: Database | Transaction, session: Session, taskId: string) => {
+    const access = await taskWithMember(connection, session, taskId);
+    assertUpdater(access.member, access.task);
+    return access;
+  };
+  const acceptor = async (connection: Database | Transaction, session: Session, taskId: string) => {
+    const access = await taskWithMember(connection, session, taskId);
+    assert(access.member.role === "leader" || access.member.canAccept, 403, "FORBIDDEN", "Bạn không có quyền nghiệm thu.");
+    return access;
+  };
+  const leader = async (connection: Database | Transaction, session: Session, projectId: string) => {
+    const member = await projectMember(connection, session, projectId);
+    assert(member.role === "leader", 403, "FORBIDDEN", "Chỉ trưởng nhóm được tạo báo cáo.");
+    return member;
+  };
+  return {
+    async listSubmissions(session, taskId) {
+      await taskWithMember(db, session, taskId);
+      return listTaskSubmissions(db, taskId);
+    },
+    async submitWork(session, taskId, raw, options) {
+      const input = submitWorkInputSchema.strict().parse(raw);
+      assert(input.content.trim(), 422, "VALIDATION_ERROR", "Bài nộp không được để trống.");
+      await updater(db, session, taskId);
+      const identity = mutationIdentity(session.user.id, `POST /api/tasks/${taskId}/submissions`, options.idempotencyKey, input);
+      return mutate(db, identity, tx => updater(tx, session, taskId), async tx => {
+        const { task, member } = await lockDeliveryTask(tx, session, taskId);
+        assertUpdater(member, task);
+        assert(task.status !== "done", 409, "INVALID_TRANSITION", "Công việc đã được nghiệm thu.");
+        if (task.version !== input.expectedTaskVersion) throw conflict();
+        const previous = await listTaskSubmissions(tx, taskId);
+        const submission: Submission = {
+          id: randomUUID(), projectId: task.projectId, taskId, authorMemberId: member.id,
+          revision: (previous[0]?.revision ?? 0) + 1, contentType: input.contentType,
+          content: input.content, criteriaSnapshot: task.criteria, submittedAt: new Date().toISOString(),
         };
-      } else {
-        // Chỉ có met hoặc insufficient_evidence -> giữ nguyên in_review
-        // Tuyệt đối không tự chuyển sang done!
-        updatedTask = task;
-      }
-    }
-
-    await this.repo.commitReview(review, updatedTask, task.version, options.idempotencyKey);
-    const result: RequestReviewResult = { review, task: updatedTask ?? task };
-
-    if (options.idempotencyKey) {
-      await this.repo.saveIdempotencyResult(options.idempotencyKey, result);
-    }
-
-    return result;
-  }
-
-  async getReview(session: Session, submissionId: Id): Promise<Review | null> {
-    const submission = await this.repo.getSubmission(submissionId);
-    if (!submission) {
-      throw new DeliveryServiceError(404, "NOT_FOUND", "Không tìm thấy bài nộp.");
-    }
-    return this.repo.getReview(submissionId);
-  }
-
-  async confirmAcceptance(
-    session: Session,
-    taskId: Id,
-    input: ConfirmAcceptanceInput,
-    options: MutationOptions,
-  ): Promise<Task> {
-    if (options.idempotencyKey) {
-      const cached = await this.repo.getIdempotencyResult<Task>(options.idempotencyKey);
-      if (cached) return cached;
-    }
-
-    const task = await this.repo.getTask(taskId);
-    if (!task) {
-      throw new DeliveryServiceError(404, "NOT_FOUND", "Không tìm thấy công việc.");
-    }
-
-    // 1. Kiểm tra quyền: Leader hoặc canAccept === true
-    const member = this.getMemberForProject(session, task.projectId);
-    const canAccept = member && (member.role === "leader" || member.canAccept === true);
-    if (!canAccept) {
-      throw new DeliveryServiceError(403, "FORBIDDEN", "Chỉ trưởng nhóm hoặc thành viên có quyền nghiệm thu mới được xác nhận hoàn thành.");
-    }
-
-    // 2. Kiểm tra version
-    if (task.version !== input.expectedTaskVersion) {
-      throw new DeliveryServiceError(409, "VERSION_CONFLICT", "Dữ liệu công việc đã thay đổi. Vui lòng tải lại.");
-    }
-
-    // 3. Bất biến: Task phải ở trạng thái in_review
-    if (task.status !== "in_review") {
-      throw new DeliveryServiceError(409, "INVALID_TRANSITION", "Công việc phải ở trạng thái Chờ nghiệm thu (in_review) mới có thể nghiệm thu.");
-    }
-
-    // 4. Kiểm tra submissionId và review
-    const submission = await this.repo.getSubmission(input.submissionId);
-    if (!submission || submission.taskId !== taskId) {
-      throw new DeliveryServiceError(422, "VALIDATION_ERROR", "Bài nộp được chọn không hợp lệ cho công việc này.");
-    }
-
-    const review = await this.repo.getReview(submission.id);
-    if (!review) {
-      throw new DeliveryServiceError(422, "VALIDATION_ERROR", "Bài nộp chưa có kết quả đánh giá từ Reviewer AI.");
-    }
-
-    // Bất biến cốt lõi: TẤT CẢ tiêu chí phải là 'met'
-    const hasUnmet = review.results.some((r) => r.verdict !== "met");
-    if (hasUnmet) {
-      throw new DeliveryServiceError(
-        422,
-        "VALIDATION_ERROR",
-        "Chưa đủ điều kiện nghiệm thu: Vẫn còn tiêu chí chưa đạt hoặc chưa đủ bằng chứng xác thực.",
-      );
-    }
-
-    // 5. Cập nhật task sang done
-    const updatedTask: Task = {
-      ...task,
-      status: "done",
-      version: task.version + 1,
-      acceptedSubmissionId: submission.id,
-      acceptedByMemberId: member.id,
-      acceptedAt: new Date().toISOString(), // Ghi nhận thời điểm nghiệm thu riêng biệt với submittedAt
-    };
-
-    await this.repo.commitAcceptance(updatedTask, input.expectedTaskVersion, options.idempotencyKey);
-
-    if (options.idempotencyKey) {
-      await this.repo.saveIdempotencyResult(options.idempotencyKey, updatedTask);
-    }
-
-    return updatedTask;
-  }
-
-  async generateWeeklyReport(
-    session: Session,
-    projectId: Id,
-    input: GenerateWeeklyReportInput,
-    options: MutationOptions,
-  ): Promise<WeeklyReport> {
-    if (options.idempotencyKey) {
-      const cached = await this.repo.getIdempotencyResult<WeeklyReport>(options.idempotencyKey);
-      if (cached) return cached;
-    }
-
-    // Kiểm tra quyền: Chỉ Leader
-    const member = this.getMemberForProject(session, projectId);
-    if (!member || member.role !== "leader") {
-      throw new DeliveryServiceError(403, "FORBIDDEN", "Chỉ trưởng nhóm mới có quyền bấm tạo báo cáo tuần.");
-    }
-
-    const pStartTime = new Date(input.periodStart).getTime();
-    const pEndTime = new Date(input.periodEnd).getTime();
-    if (isNaN(pStartTime) || isNaN(pEndTime) || pEndTime < pStartTime) {
-      throw new DeliveryServiceError(422, "VALIDATION_ERROR", "Khoảng thời gian báo cáo không hợp lệ.");
-    }
-
-    const asOf = new Date().toISOString();
-    const asOfTime = new Date(asOf).getTime();
-
-    // Đọc snapshot dữ liệu
-    const sources = await this.repo.readReportSources(projectId, asOf);
-
-    // Backend tính toán chính xác 100% metrics độc lập với AI
-    const statusCounts = {
-      todo: 0,
-      in_progress: 0,
-      blocked: 0,
-      in_review: 0,
-      changes_requested: 0,
-      done: 0,
-    };
-
-    let dueInPeriodTotal = 0;
-    let submittedOnTimeTotal = 0;
-    let acceptedOnTimeTotal = 0;
-    let overdueOpenTotal = 0;
-
-    for (const task of sources.tasks) {
-      if (statusCounts[task.status] !== undefined) {
-        statusCounts[task.status]++;
-      }
-
-      const taskDeadlineTime = new Date(task.deadline).getTime();
-
-      // Kiểm tra task đến hạn trong kỳ [periodStart, periodEnd)
-      if (taskDeadlineTime >= pStartTime && taskDeadlineTime < pEndTime) {
-        dueInPeriodTotal++;
-
-        // Tìm bài nộp đầu tiên của task
-        const taskSubs = sources.submissions
-          .filter((s) => s.taskId === task.id)
-          .sort((a, b) => new Date(a.submittedAt).getTime() - new Date(b.submittedAt).getTime());
-
-        if (taskSubs.length > 0) {
-          const firstSubTime = new Date(taskSubs[0].submittedAt).getTime();
-          if (firstSubTime <= taskDeadlineTime) {
-            submittedOnTimeTotal++;
-          }
+        await tx.insert(submissions).values(submission);
+        const [updated] = await tx.update(tasks).set({ status: "in_review", version: task.version + 1 }).where(eq(tasks.id, taskId)).returning();
+        return { submission, task: updated };
+      });
+    },
+    async getReview(session, submissionId) {
+      await submissionWithMember(db, session, submissionId);
+      return findReview(db, submissionId);
+    },
+    async requestReview(session, submissionId, options) {
+      const { submission } = await submissionWithMember(db, session, submissionId);
+      const { task } = await updater(db, session, submission.taskId);
+      const identity = mutationIdentity(session.user.id, `POST /api/submissions/${submissionId}/review`, options.idempotencyKey, {});
+      const saved = await replay<RequestReviewResult>(db, identity);
+      if (saved !== undefined) return saved;
+      const existing = await findReview(db, submissionId);
+      const generated = existing ? null : await ai.generate("reviewer", { submission });
+      const proposal = generated ? validateReviewerProposal(generated.proposal, submission) : null;
+      return mutate(db, identity, tx => updater(tx, session, task.id), async tx => {
+        const { task: current, member } = await lockDeliveryTask(tx, session, task.id);
+        assertUpdater(member, current);
+        const prior = await findReview(tx, submissionId);
+        if (prior) return { review: prior, task: current };
+        if (current.version !== task.version) throw conflict();
+        const review: Review = {
+          id: randomUUID(), projectId: submission.projectId, taskId: task.id, submissionId,
+          ...proposal!, aiMode: generated!.aiMode, createdAt: new Date().toISOString(),
+        };
+        await tx.insert(reviews).values(review);
+        const latest = (await listTaskSubmissions(tx, task.id))[0];
+        let updated = current;
+        if (latest?.id === submissionId && current.status !== "done") {
+          const [row] = await tx.update(tasks).set({
+            status: review.results.some(r => r.verdict === "not_met") ? "changes_requested" : "in_review",
+            version: current.version + 1,
+          }).where(eq(tasks.id, task.id)).returning();
+          updated = row;
         }
-
-        // Kiểm tra nghiệm thu đúng hạn
-        if (task.acceptedAt) {
-          const acceptedTime = new Date(task.acceptedAt).getTime();
-          if (acceptedTime <= taskDeadlineTime) {
-            acceptedOnTimeTotal++;
-          }
-        }
-      }
-
-      // Quá hạn tại thời điểm asOf
-      if (taskDeadlineTime < asOfTime && task.status !== "done") {
-        overdueOpenTotal++;
-      }
-    }
-
-    // Đếm submissions và progressUpdates trong kỳ
-    const submissionsInPeriodTotal = sources.submissions.filter((s) => {
-      const t = new Date(s.submittedAt).getTime();
-      return t >= pStartTime && t < pEndTime;
-    }).length;
-
-    const progressUpdatesInPeriodTotal = sources.progressUpdates.filter((p) => {
-      const t = new Date(p.createdAt).getTime();
-      return t >= pStartTime && t < pEndTime;
-    }).length;
-
-    const metrics: ReportMetrics = {
-      statusCounts,
-      dueInPeriodTotal,
-      submittedOnTimeTotal,
-      acceptedOnTimeTotal,
-      overdueOpenTotal,
-      submissionsInPeriodTotal,
-      progressUpdatesInPeriodTotal,
-    };
-
-    // Thu thập danh sách sourceRefs đầy đủ
-    const sourceRefs: SourceRef[] = [
-      ...sources.tasks.map((t) => ({ entity: "Task" as const, id: t.id })),
-      ...sources.submissions.map((s) => ({ entity: "Submission" as const, id: s.id })),
-      ...sources.reviews.map((r) => ({ entity: "Review" as const, id: r.id })),
-      ...sources.messages.map((m) => ({ entity: "Message" as const, id: m.id })),
-      ...sources.progressUpdates.map((p) => ({ entity: "ProgressUpdate" as const, id: p.id })),
-    ];
-
-    // Gọi AI Weekly Report
-    const aiResult = await aiProvider.generate("weekly_report", {
-      metrics,
-      sourceRefs,
-      periodStart: input.periodStart,
-      periodEnd: input.periodEnd,
-      asOf,
-      sources,
-    });
-
-    const reportId = `wr_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-    const report: WeeklyReport = {
-      id: reportId,
-      projectId,
-      generatedByMemberId: member.id,
-      periodStart: input.periodStart,
-      periodEnd: input.periodEnd,
-      asOf,
-      metrics,
-      sourceRefs,
-      summary: aiResult.proposal,
-      aiMode: aiResult.aiMode,
-      createdAt: asOf,
-    };
-
-    await this.repo.saveReport(report, options.idempotencyKey);
-
-    if (options.idempotencyKey) {
-      await this.repo.saveIdempotencyResult(options.idempotencyKey, report);
-    }
-
-    return report;
-  }
-
-  async listReports(session: Session, projectId: Id): Promise<WeeklyReport[]> {
-    return this.repo.listReports(projectId);
-  }
-
-  async getReport(session: Session, reportId: Id): Promise<WeeklyReport> {
-    const report = await this.repo.getReport(reportId);
-    if (!report) {
-      throw new DeliveryServiceError(404, "NOT_FOUND", "Không tìm thấy báo cáo.");
-    }
-    return report;
-  }
+        return { review, task: updated };
+      });
+    },
+    async confirmAcceptance(session, taskId, raw, options) {
+      const input = confirmAcceptanceInputSchema.strict().parse(raw);
+      await acceptor(db, session, taskId);
+      const identity = mutationIdentity(session.user.id, `POST /api/tasks/${taskId}/accept`, options.idempotencyKey, input);
+      return mutate(db, identity, tx => acceptor(tx, session, taskId), async tx => {
+        const { task, member } = await lockDeliveryTask(tx, session, taskId);
+        assert(member.role === "leader" || member.canAccept, 403, "FORBIDDEN", "Bạn không có quyền nghiệm thu.");
+        if (task.version !== input.expectedTaskVersion) throw conflict();
+        assert(task.status === "in_review", 409, "INVALID_TRANSITION", "Công việc phải đang chờ nghiệm thu.");
+        const latest = (await listTaskSubmissions(tx, taskId))[0];
+        assert(latest?.id === input.submissionId, 422, "VALIDATION_ERROR", "Chỉ được nghiệm thu bài nộp mới nhất của công việc.");
+        const review = await findReview(tx, latest.id);
+        assert(review, 422, "VALIDATION_ERROR", "Bài nộp chưa có nhận xét.");
+        validateReviewerProposal(review, latest);
+        assert(review.results.length > 0 && review.results.every(r => r.verdict === "met"), 422, "VALIDATION_ERROR", "Mọi tiêu chí phải đạt và có bằng chứng trước khi nghiệm thu.");
+        const [updated] = await tx.update(tasks).set({ status: "done", version: task.version + 1,
+          acceptedSubmissionId: latest.id, acceptedByMemberId: member.id, acceptedAt: new Date().toISOString(),
+        }).where(eq(tasks.id, taskId)).returning();
+        return updated;
+      });
+    },
+    async generateWeeklyReport(session, projectId, raw, options) {
+      const input = generateWeeklyReportInputSchema.strict().parse(raw);
+      await leader(db, session, projectId);
+      const identity = mutationIdentity(session.user.id, `POST /api/projects/${projectId}/reports`, options.idempotencyKey, input);
+      const saved = await replay<WeeklyReport>(db, identity);
+      if (saved !== undefined) return saved;
+      const { asOf, sources } = await readReportSnapshot(session, projectId, db);
+      assert(Date.parse(input.periodStart) < Date.parse(input.periodEnd) && Date.parse(input.periodEnd) <= Date.parse(asOf), 422, "VALIDATION_ERROR", "Kỳ báo cáo phải có thời điểm bắt đầu trước kết thúc và không ở tương lai.");
+      const metrics = calculateReportMetrics(sources, input, asOf);
+      const sourceRefs: SourceRef[] = [
+        ...sources.tasks.map(t => ({ entity: "Task" as const, id: t.id })),
+        ...sources.messages.map(t => ({ entity: "Message" as const, id: t.id })),
+        ...sources.progressUpdates.map(t => ({ entity: "ProgressUpdate" as const, id: t.id })),
+        ...sources.submissions.map(t => ({ entity: "Submission" as const, id: t.id })),
+        ...sources.reviews.map(t => ({ entity: "Review" as const, id: t.id })),
+      ];
+      const aiInput: ReportAiInput = { ...input, asOf, sources, metrics, sourceRefs };
+      const generated = await ai.generate("weekly_report", aiInput);
+      const summary = validateReportProposal(generated.proposal, aiInput);
+      return mutate(db, identity, tx => leader(tx, session, projectId), async tx => {
+        const member = await leader(tx, session, projectId);
+        const report: WeeklyReport = { id: randomUUID(), projectId, generatedByMemberId: member.id,
+          ...input, asOf, metrics, sourceRefs, summary, aiMode: generated.aiMode, createdAt: new Date().toISOString() };
+        await tx.insert(weeklyReports).values(report);
+        return report;
+      });
+    },
+    async listReports(session, projectId) {
+      await projectMember(db, session, projectId);
+      return db.select().from(weeklyReports).where(eq(weeklyReports.projectId, projectId)).orderBy(desc(weeklyReports.createdAt));
+    },
+    async getReport(session, reportId) {
+      const [report] = await db.select().from(weeklyReports).where(eq(weeklyReports.id, reportId));
+      if (!report) throw notFound();
+      await projectMember(db, session, report.projectId);
+      return report;
+    },
+    async getReportSource(session, reportId, raw) {
+      const ref = sourceRefSchema.strict().parse(raw);
+      const [report] = await db.select().from(weeklyReports).where(eq(weeklyReports.id, reportId));
+      if (!report) throw notFound();
+      await projectMember(db, session, report.projectId);
+      if (!report.sourceRefs.some(source => source.entity === ref.entity && source.id === ref.id)) throw notFound();
+      const table = { Task: tasks, Submission: submissions, Review: reviews, Message: messages, ProgressUpdate: progressUpdates }[ref.entity];
+      const [source] = await db.select().from(table).where(eq(table.id, ref.id));
+      if (!source || source.projectId !== report.projectId) throw notFound();
+      return source;
+    },
+  };
 }
 
-export const deliveryService: DeliveryService = new DefaultDeliveryService();
+export function calculateReportMetrics(sources: ReportAiInput["sources"], period: GenerateWeeklyReportInput, asOf: string): ReportMetrics {
+  const start = Date.parse(period.periodStart), end = Date.parse(period.periodEnd);
+  const within = (value: string) => Date.parse(value) >= start && Date.parse(value) < end;
+  const metrics: ReportMetrics = { statusCounts: { todo: 0, in_progress: 0, blocked: 0, in_review: 0, changes_requested: 0, done: 0 },
+    dueInPeriodTotal: 0, submittedOnTimeTotal: 0, acceptedOnTimeTotal: 0, overdueOpenTotal: 0,
+    submissionsInPeriodTotal: sources.submissions.filter(s => within(s.submittedAt)).length,
+    progressUpdatesInPeriodTotal: sources.progressUpdates.filter(s => within(s.createdAt)).length };
+  for (const task of sources.tasks) {
+    metrics.statusCounts[task.status]++;
+    if (within(task.deadline)) {
+      metrics.dueInPeriodTotal++;
+      if (sources.submissions.some(s => s.taskId === task.id && Date.parse(s.submittedAt) <= Date.parse(task.deadline))) metrics.submittedOnTimeTotal++;
+      if (task.acceptedAt && Date.parse(task.acceptedAt) <= Date.parse(task.deadline)) metrics.acceptedOnTimeTotal++;
+    }
+    if (task.status !== "done" && Date.parse(task.deadline) < Date.parse(asOf)) metrics.overdueOpenTotal++;
+  }
+  return metrics;
+}
+
+export const deliveryService: DeliveryService = {
+  submitWork: (...a) => createDeliveryService(getDb()).submitWork(...a),
+  listSubmissions: (...a) => createDeliveryService(getDb()).listSubmissions(...a),
+  requestReview: (...a) => createDeliveryService(getDb()).requestReview(...a),
+  getReview: (...a) => createDeliveryService(getDb()).getReview(...a),
+  confirmAcceptance: (...a) => createDeliveryService(getDb()).confirmAcceptance(...a),
+  generateWeeklyReport: (...a) => createDeliveryService(getDb()).generateWeeklyReport(...a),
+  listReports: (...a) => createDeliveryService(getDb()).listReports(...a),
+  getReport: (...a) => createDeliveryService(getDb()).getReport(...a),
+  getReportSource: (...a) => createDeliveryService(getDb()).getReportSource(...a),
+};

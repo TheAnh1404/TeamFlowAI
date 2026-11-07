@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { hashSessionToken, matchesAccessCode, newSessionToken } from "../../../server/auth/credentials.ts";
+import { hashSessionToken, newSessionToken } from "../../../server/auth/credentials.ts";
 import { mutationIdentity } from "../../../server/db/idempotency-key.ts";
 
 test("session token ngẫu nhiên và database chỉ lưu SHA-256", () => {
@@ -10,11 +10,6 @@ test("session token ngẫu nhiên và database chỉ lưu SHA-256", () => {
   assert.notEqual(first, second);
   assert.notEqual(hashSessionToken(first), first);
   assert.equal(hashSessionToken(first), hashSessionToken(first));
-});
-test("mã truy cập phải khớp chính xác kể cả khoảng trắng và độ dài", () => {
-  assert.equal(matchesAccessCode("a-private-demo-access-code", "a-private-demo-access-code"), true);
-  assert.equal(matchesAccessCode("leader", "a-private-demo-access-code"), false);
-  assert.equal(matchesAccessCode("a-private-demo-access-code ", "a-private-demo-access-code"), false);
 });
 test("retry cùng user, endpoint, key và body giữ nguyên danh tính", () => {
   const request = ["u2", "POST /api/projects/p1/messages", "mutation-key", { content: "đang làm", taskId: "t1" }];

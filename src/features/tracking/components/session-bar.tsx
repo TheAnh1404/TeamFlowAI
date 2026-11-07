@@ -6,15 +6,15 @@ import styles from "./tracking.module.css";
 
 export function DemoSessionBar({ user }: { user?: User }) {
   const router = useRouter();
-  const [account, setAccount] = useState("TV2"); const [accessCode, setAccessCode] = useState("");
+  const [account, setAccount] = useState("TV2");
   const [busy, setBusy] = useState(false); const [error, setError] = useState("");
   async function submit(event: FormEvent) {
     event.preventDefault(); setBusy(true); setError("");
     try {
-      const response = await fetch("/api/session", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ account, accessCode }) });
+      const response = await fetch("/api/session", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ account }) });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error?.message ?? "Không thể đăng nhập.");
-      setAccessCode(""); router.refresh();
+      router.refresh();
     } catch (e) { setError(e instanceof Error ? e.message : "Không thể kết nối."); }
     finally { setBusy(false); }
   }
@@ -33,7 +33,6 @@ export function DemoSessionBar({ user }: { user?: User }) {
       <label>Tài khoản<select value={account} onChange={(e) => setAccount(e.target.value)} disabled={busy}>
         <option value="TV1">TV1 — Trưởng nhóm demo</option><option value="TV2">TV2 — Backend demo</option><option value="TV3">TV3 — Nghiệm thu demo</option>
       </select></label>
-      <label>Mã truy cập demo<input type="password" autoComplete="off" value={accessCode} minLength={16} maxLength={200} required onChange={(e) => setAccessCode(e.target.value)} disabled={busy} /></label>
       <button type="submit" disabled={busy}>{busy ? "Đang xử lý…" : user ? "Đổi tài khoản" : "Vào phiên demo"}</button>
       {user && <button type="button" disabled={busy} onClick={logout}>Đăng xuất</button>}
     </form>

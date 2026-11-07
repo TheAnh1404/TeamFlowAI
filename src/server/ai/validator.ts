@@ -87,6 +87,9 @@ export function validateReviewerProposal(raw: unknown, submission: Submission): 
 
     // Bất biến: quote phải là substring có thật trong submission.content
     for (const ev of r.evidence) {
+      if (ev.submissionId !== submission.id) {
+        throw new AiInvalidOutputError("Bằng chứng phải thuộc đúng bài nộp đang được review.");
+      }
       if (ev.quote && !submission.content.includes(ev.quote)) {
         throw new AiInvalidOutputError(
           `Bằng chứng trích dẫn không tồn tại trong bài nộp (Hallucination detection): "${ev.quote.slice(0, 50)}..."`

@@ -5,13 +5,11 @@ import type { CreateDemoSessionInput } from "@/contracts/auth";
 import { getDb } from "@/server/db/client";
 import { sessions, users } from "@/server/db/schema";
 import { ApiError } from "@/server/http/api-error";
-import { matchesAccessCode, newSessionToken, hashSessionToken } from "./credentials";
+import { newSessionToken, hashSessionToken } from "./credentials";
 import { SESSION_COOKIE, requireSession } from "./index";
 
 export async function createDemoSession(input: CreateDemoSessionInput) {
-  const code = process.env.DEMO_ACCESS_CODE;
-  if (!code || code.length < 16) throw new ApiError(503, "CONFIGURATION_REQUIRED", "Server cần DEMO_ACCESS_CODE tối thiểu 16 ký tự.");
-  if (input.accessCode.length > 256 || !matchesAccessCode(input.accessCode, code)) throw new ApiError(401, "UNAUTHENTICATED", "Mã truy cập demo không hợp lệ.");
+  if (process.env.ENABLE_DEMO_AUTH !== "true") throw new ApiError(403, "FORBIDDEN", "Đăng nhập demo chưa được bật trên server.");
   const db = getDb();
   const demoUserId = input.demoAccount === "TV1" ? "demo-tv1" : input.demoAccount === "TV2" ? "demo-tv2" : "demo-tv3";
   const [user] = await db.select().from(users).where(eq(users.id, demoUserId));

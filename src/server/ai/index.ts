@@ -26,19 +26,10 @@ export { isRealAiConfigured } from "./real-provider";
 
 export const aiProvider: AiProvider = {
   async generate<K extends AiKind>(kind: K, input: AiInputByKind[K]): Promise<AiResult<AiOutputByKind[K]>> {
-    // 1. Thử gọi AI thật nếu có cấu hình API Key
-    if (isRealAiConfigured()) {
-      try {
-        const proposal = await generateReal(kind, input);
-        return { proposal, aiMode: "real" };
-      } catch (err: unknown) {
-        // Nếu có lỗi từ real AI mà môi trường yêu cầu nghiêm ngặt hoặc không cho fallback thì ném lỗi
-        if (process.env.AI_STRICT_REAL === "true") {
-          throw err;
-        }
-        // Ghi log nhẹ cảnh báo và fallback sang mock có nhãn minh bạch
-        console.warn(`[AI Provider] Chế độ Real gặp sự cố (${err instanceof Error ? err.message : String(err)}). Chuyển sang Mock có nhãn minh bạch.`);
-      }
+    // Explicit real requests must fail visibly; never replace a failed provider with mock.
+    if (process.env.AI_MODE === "real" || isRealAiConfigured()) {
+      const proposal = await generateReal(kind, input);
+      return { proposal, aiMode: "real" };
     }
 
     // 2. Chế độ Mock thông minh bám sát nghiệp vụ và hợp đồng

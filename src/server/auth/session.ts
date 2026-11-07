@@ -1,5 +1,5 @@
 import "server-only";
-import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { and, eq, gt } from "drizzle-orm";
 import type { Database } from "@/server/db/client";
 import { projectMembers, sessions, users } from "@/server/db/schema";
@@ -16,10 +16,8 @@ export async function findSession(db: Database, token?: string): Promise<Session
   if (!entry) return null;
   return { user: entry.user, memberships: await db.select().from(projectMembers).where(eq(projectMembers.userId, entry.user.id)) };
 }
-export async function createDemoSession(db: Database, account: keyof typeof DEMO_ACCOUNTS, code: string, previousToken?: string) {
-  const configuredCode = process.env.DEMO_ACCESS_CODE;
-  assert(process.env.ENABLE_DEMO_AUTH === "true" && configuredCode && configuredCode.length >= 16, 403, "FORBIDDEN", "Đăng nhập demo chưa được bật hoặc cấu hình.");
-  assert(timingSafeEqual(Buffer.from(digest(code)), Buffer.from(digest(configuredCode))), 403, "FORBIDDEN", "Mã truy cập demo không hợp lệ.");
+export async function createDemoSession(db: Database, account: keyof typeof DEMO_ACCOUNTS, previousToken?: string) {
+  assert(process.env.ENABLE_DEMO_AUTH === "true", 403, "FORBIDDEN", "Đăng nhập demo chưa được bật trên server.");
   const [user] = await db.select().from(users).where(eq(users.id, DEMO_ACCOUNTS[account]));
   assert(user, 409, "DEMO_NOT_SEEDED", "Chưa có tài khoản demo. Cần chạy seed phía server.");
   const token = randomBytes(32).toString("hex");

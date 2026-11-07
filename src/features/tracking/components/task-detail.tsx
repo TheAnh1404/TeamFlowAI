@@ -12,6 +12,7 @@ import { displayTime, LoadNotice, ProjectNav } from "./shared";
 import type { WorkspaceData } from "../model";
 import { statusLabels } from "../model";
 import styles from "./tracking.module.css";
+import { DeliverySlot } from "@/features/delivery";
 
 const symbols: Record<TaskStatus | "overdue", string> = {
   todo: "○",
@@ -121,7 +122,7 @@ export function TaskDetail({ projectId, taskId, children }: { projectId: string;
           </dl>
           <section className={styles.section}><h2>Tiêu chí nghiệm thu</h2><ul>{data.task.criteria.map(criterion => <li key={criterion.id}>{criterion.text} <span className={styles.meta}>({criterion.id})</span></li>)}</ul></section>
           <section className={styles.section}><h2>Lịch sử cập nhật</h2>{!data.progress.length ? <p>Chưa có cập nhật tiến độ được ghi nhận.</p> : <ol>{data.progress.map(update => <li key={update.id}><p><strong>{memberName(update.authorMemberId, data.context.members, data.context.users)}</strong> · {displayTime(update.createdAt, data.context.project.timeZone)} · {statusLabels[update.statusBefore]} → {statusLabels[update.statusAfter]}</p><p>{update.note}</p>{update.blocker && <p>Trở ngại: {update.blocker}</p>}</li>)}</ol>}</section>
-          <section className={styles.section} aria-label="Nộp bài và review">{children ?? <p className={styles.notice}>Khu vực nộp bài và nhận xét chưa được triển khai.</p>}</section>
+          <section className={styles.section} aria-label="Nộp bài và review">{children ?? <DeliverySlot task={data.task} currentMember={data.context.members.find(member => member.userId === data.context.session.user.id)} onTaskChange={state.reload} />}</section>
         </>
       )}
     </main>
