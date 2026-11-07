@@ -13,7 +13,12 @@
     "start": "next start",
     "lint": "eslint . --max-warnings=0",
     "typecheck": "next typegen && tsc --noEmit",
-    "check": "npm run lint && npm run typecheck"
+    "check": "npm run lint && npm run typecheck",
+    "db:generate": "node scripts/db-generate.mjs",
+    "db:migrate": "node scripts/db-migrate.mjs",
+    "db:seed": "node scripts/db-seed.mjs",
+    "test:tracking": "node --test --test-isolation=none src/features/tracking/tests/policy.test.mjs src/features/tracking/tests/security.test.mjs",
+    "test:tracking:integration": "node scripts/test-tracking-integration.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "1.2.0",

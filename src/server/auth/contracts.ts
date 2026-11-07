@@ -9,7 +9,7 @@ export interface SessionProvider {
   getCurrentSession(): Promise<Session | null>;
 }
 
-// Signatures only. TODO(TV2): authoritative server checks in implementation session.
+// Implemented in index.ts. These authorize actors; feature services validate transitions.
 export interface AuthorizationProvider {
   assertProjectMember(session: Session, projectId: Id): Promise<ProjectMember>;
   assertTaskUpdateAllowed(session: Session, taskId: Id): Promise<void>;

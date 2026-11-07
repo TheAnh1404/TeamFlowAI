@@ -5,7 +5,7 @@ import type {
 } from "@/contracts";
 import type { Session } from "@/server/auth/contracts";
 
-// TODO(TV2): signatures only; no task matching, status transitions or writes.
+// Stable public server contract. Implementation: implementation.ts.
 export interface TrackingService {
   listTasks(session: Session, projectId: Id): Promise<Task[]>;
   getTask(session: Session, taskId: Id): Promise<Task>;

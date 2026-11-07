@@ -1,4 +1,4 @@
-import { notImplementedResponse } from "@/server/http/not-implemented";
+import { getUsers as GET } from "@/features/tracking/server/handlers";
 
-// TODO(TV2): implement only in the assigned feature session; no DB/auth/AI here.
-export const GET = notImplementedResponse;
+export const runtime = "nodejs";
+export { GET };

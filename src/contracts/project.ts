@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { idSchema, instantSchema } from "./common";
 import { projectRoleSchema } from "./enums";
+import { planStatusSchema } from "./enums";
 
 export const userSchema = z.object({
   id: idSchema,
@@ -44,3 +45,11 @@ export type AddProjectMemberInput = z.infer<typeof addProjectMemberInputSchema>;
 export type UpdateProjectMemberInput = z.infer<typeof updateProjectMemberInputSchema>;
 export interface ProjectDetails { project: Project; members: ProjectMember[] }
 export interface CreateProjectResult { project: Project; member: ProjectMember }
+
+// Read model for P02. Counts contain published tasks only; no draft task content.
+export const projectSummarySchema = projectSchema.extend({
+  planStatus: planStatusSchema.nullable(),
+  memberCount: z.number().int(),
+  taskCounts: z.object({ total: z.number().int(), done: z.number().int(), blocked: z.number().int() }),
+});
+export type ProjectSummary = z.infer<typeof projectSummarySchema>;

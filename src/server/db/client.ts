@@ -1,19 +1,25 @@
 import "server-only";
-import { neon } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-http";
+import { Pool, neonConfig } from "@neondatabase/serverless";
+import { drizzle } from "drizzle-orm/neon-serverless";
 import { getDatabaseUrl } from "@/server/env";
 import * as schema from "./schema";
 
 function createDb() {
-  // Client construction only. No query or network request is issued here.
-  return drizzle(neon(getDatabaseUrl()), { schema });
+  // Node 24 supplies WebSocket. The pool opens connections only on first query.
+  // WebSockets support the interactive transactions required by tracking.
+  neonConfig.webSocketConstructor = globalThis.WebSocket;
+  const pool = new Pool({ connectionString: getDatabaseUrl(), max: 5, connectionTimeoutMillis: 8000 });
+  return drizzle(pool, { schema });
 }
 
 export type Database = ReturnType<typeof createDb>;
 let database: Database | undefined;
 
-// TODO(TV2): use only from server repositories; pages/stubs must not call it.
+// Server repositories only; no connection or environment access at import time.
 export function getDb(): Database {
   database ??= createDb();
   return database;
 }
+
+export type DatabaseTransaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
+export type DatabaseReader = Database | DatabaseTransaction;

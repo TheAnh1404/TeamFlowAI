@@ -1,3 +1,7 @@
-// Public, client-safe entry. TODO(TV2): explicitly export tracking/task-shell UI here.
+// Public, client-safe tracking/task-shell UI entry.
 // Never export server implementations into the client-facing entry.
 export type { Task, Message, ProgressUpdate } from "@/contracts";
+export { ProjectsPage } from "./components/projects-page";
+export { TaskList } from "./components/task-list";
+export { TaskDetail } from "./components/task-detail";
+export { ProjectChat } from "./components/chat";

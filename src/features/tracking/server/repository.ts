@@ -1,7 +1,7 @@
 import "server-only";
 import type { Id, Message, ProgressUpdate, Task } from "@/contracts";
 
-// TODO(TV2): data adapter and atomic/idempotent commits in implementation session.
+// Implemented by neon-repository.ts; mutation calls run inside idempotency.ts transactions.
 export interface TrackingRepository {
   listTasks(projectId: Id): Promise<Task[]>;
   getTask(taskId: Id): Promise<Task | null>;

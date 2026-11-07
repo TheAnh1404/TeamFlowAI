@@ -1,5 +1,7 @@
 # Contracts thiết kế MVP
 
+> **Trạng thái phiên TV2:** data shapes đã có tại `src/contracts/`; tracking/auth và các read model bổ sung ở cuối tài liệu đã được triển khai. TV1/TV3 còn giữ stub. Đặc tả nghiệp vụ gốc bên dưới vẫn là nguồn tên trường/enum, không có nghĩa mọi API đã hoạt động. Xem [TV2_HANDOFF](TV2_HANDOFF.md).
+
 **Chỉ là đặc tả dự kiến trong Markdown.** Chưa tạo type, schema, migration, endpoint, wrapper AI hay database thật. Stack, kiểu ID vật lý, session, provider/model AI **chưa chốt**. TV2 điều phối contract/dữ liệu; TV1 xác nhận planning/UI; TV3 xác nhận AI/delivery/report. Đọc cùng [quy tắc](PROJECT_RULES.md) và [timeline](TIMELINE_4H.md).
 
 ## 1. Quy ước chung
@@ -404,3 +406,24 @@ Giả sử tại mốc dưới chỉ có t1 in_review, một progress pu1 và m�
 ## 8. Chốt trước khi triển khai
 
 TV2 dẫn chốt stack/database/transaction, ID vật lý, session và tài khoản demo, helper quyền, lưu key retry và giới hạn input; TV1 xác nhận UI/publish/version; TV3 xác nhận wrapper AI, provider/model, timeout, output validation và nguồn báo cáo. Chốt `canAccept` cho từng tài khoản, cách hiển thị timezone và khoảng tuần mặc định. Giữ tên field/enum/shape thiết kế này hoặc cập nhật đồng bộ với bên sử dụng trước khi đổi phá vỡ; không dùng quyết định thiết kế để tuyên bố tính năng đã chạy.
+
+## 9. Bổ sung tương thích trong phiên TV2
+
+Giữ nguyên các field/enum gốc. Những API bổ sung dưới phục vụ P02 và nhãn thành viên tracking, không triển khai nghiệp vụ planning/delivery.
+
+| Method/path | Owner | Quyền | Request → data response | Lỗi chính |
+|---|---|---|---|---|
+| `POST /api/session` | TV2 | Biết mã truy cập demo của server | `{demoAccount: "TV1" \| "TV2" \| "TV3", accessCode: string}` → `{user: User, memberships: ProjectMember[]}`; cookie opaque HttpOnly | 401 mã sai; 422 body sai; 503 cấu hình/seed thiếu |
+| `DELETE /api/session` | TV2 | Cookie hiện hành; kiểm tra cùng origin | Không body → `{signedOut: true}`, thu hồi session hiện hành | 403 khác origin; 503 DB lỗi |
+| `GET /api/projects` | TV2 | Session hợp lệ | Không body → `ProjectSummary[]` chỉ project có membership | 401/503 |
+| `GET /api/projects/:projectId/members` | TV2 | Member của project | Không body → `ProjectMember[]` | 401/404/503 |
+
+`ProjectSummary` mở rộng Project bằng `planStatus: draft|published|null`, `memberCount: integer`, `taskCounts: {total, done, blocked}`; chỉ đếm Task thuộc Plan published. POST tạo project/thành viên tại cùng path vẫn do TV1 sở hữu và hiện chưa implement.
+
+`GET /api/projects/:projectId/tasks` trả `TaskListItem[]`: giữ toàn bộ Task và thêm `latestProgressUpdate: ProgressUpdate|null`. Đây là read model tương thích để hiển thị blocker/cập nhật gần nhất, không thêm field vào entity Task hay tạo trạng thái mới. `GET /api/tasks/:taskId` vẫn trả Task gốc.
+
+Session demo không có global role. Server kiểm tra `DEMO_ACCESS_CODE`, chỉ ánh xạ ba `demoAccount` đã seed, lưu hash token ngẫu nhiên cùng hạn 8 giờ; quyền luôn đọc ProjectMember mới nhất. Không nhận role/userId từ client làm danh tính. Mọi mutation kiểm tra origin; đây là xác thực demo, chưa phải đăng nhập production.
+
+Giới hạn đã dùng: request JSON tối đa 32 KB; chat/blocker tối đa 5.000 ký tự; taskId tối đa 200 ký tự khi mutation; `Idempotency-Key` 8–128 ký tự chữ/số/gạch nối/gạch dưới. Body mutation strict, không chấp nhận field userId/role thừa. Xử lý key hiện chỉ được triển khai cho tracking; TV1/TV3 phải nối helper khi thực hiện API của mình.
+
+`COORDINATOR_MODE=mock` là chế độ quy tắc demo mặc định, luôn lưu `aiMode=mock`. `real` gọi đúng interface AI của TV3; provider hiện chưa implement nên báo lỗi, giữ input, không tự fallback. AI tự đoán task mà chat chưa chỉ rõ ID hoặc người dùng chưa chọn task sẽ phải hỏi lại. Không có phần trăm tiến độ, tự đổi deadline/assignee/criteria hay tự ghi done.

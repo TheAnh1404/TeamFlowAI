@@ -1,4 +1,4 @@
-import { notImplementedResponse } from "@/server/http/not-implemented";
+import { resolveMessage as POST } from "@/features/tracking/server/handlers";
 
-// TODO(TV2): implement only in the assigned feature session; no DB/auth/AI here.
-export const POST = notImplementedResponse;
+export const runtime = "nodejs";
+export { POST };

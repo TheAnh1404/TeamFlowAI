@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { idSchema, instantSchema, versionSchema } from "./common";
 import { aiModeSchema, messageResolutionSchema, taskStatusSchema } from "./enums";
-import type { Task } from "./task";
+import { taskSchema, type Task } from "./task";
 
 export const messageSchema = z.object({
   id: idSchema,
@@ -31,6 +31,9 @@ export const submitProgressMessageInputSchema = z.object({
   content: z.string(),
   taskId: idSchema.optional(),
 });
+// Additive read model: existing Task consumers may ignore this metadata.
+export const taskListItemSchema = taskSchema.extend({ latestProgressUpdate: progressUpdateSchema.nullable() });
+export type TaskListItem = z.infer<typeof taskListItemSchema>;
 export const resolveTaskReferenceInputSchema = z.object({
   taskId: idSchema,
   requestedStatus: z.enum(["in_progress", "blocked"]),

@@ -1,5 +1,7 @@
 # Tài Liệu Bàn Giao Khung Sườn Dự Án (Scaffold Handoff) — TeamFlow AI
 
+> **Bối cảnh lịch sử:** nội dung dưới ghi trạng thái cuối phiên scaffold. Phiên TV2 sau đó đã triển khai DB/session/tracking; trạng thái hiện hành và điểm nối cho TV1/TV3 nằm tại [TV2_HANDOFF](TV2_HANDOFF.md). Không dùng danh sách “chưa triển khai” bên dưới để suy ra trạng thái sau phiên TV2.
+
 > [!IMPORTANT]
 > **Tài liệu bàn giao hạ tầng kỹ thuật cho 3 thành viên (TV1, TV2, TV3) triển khai phiên tính năng 240 phút.**
 > Khung sườn dự án đã được thiết lập và kiểm tra biên dịch thành công. Phiên scaffold **chỉ tạo nền tảng, tuyệt đối chưa triển khai bất kỳ logic nghiệp vụ nào**.

@@ -1,15 +1,11 @@
-import { PlaceholderPage } from "@/components/scaffolding/placeholder-page";
-import { placeholderIds, routes } from "@/lib/routes";
+import { TaskList } from "@/features/tracking";
 
-// TODO(TV2): implement this feature; placeholder reads URL params only.
-export default async function Page({ params }: { params: Promise<{ projectId: string }> }) {
+export default async function Page({ params, searchParams }: {
+  params: Promise<{ projectId: string }>;
+  searchParams: Promise<{ q?: string | string[]; status?: string | string[]; assignee?: string | string[] }>;
+}) {
   const { projectId } = await params;
-  return <PlaceholderPage title="Công việc" links={[
-    { href: routes.app, label: "Danh sách dự án" },
-    { href: routes.plan(projectId), label: "Kế hoạch" },
-    { href: routes.tasks(projectId), label: "Công việc" },
-    { href: routes.task(projectId, placeholderIds.task), label: "Chi tiết công việc" },
-    { href: routes.chat(projectId), label: "Chat" },
-    { href: routes.reports(projectId), label: "Báo cáo" },
-  ]} />;
+  const filters = await searchParams;
+  const first = (value: string | string[] | undefined) => Array.isArray(value) ? value[0] ?? "" : value ?? "";
+  return <TaskList key={projectId} projectId={projectId} initialSearch={first(filters.q)} initialStatus={first(filters.status)} initialAssignee={first(filters.assignee)} />;
 }

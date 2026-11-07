@@ -1,5 +1,6 @@
 // Client-safe data contracts only. Never export server modules from this entry.
 export * from "./common";
+export * from "./auth";
 export * from "./enums";
 export * from "./project";
 export * from "./plan";

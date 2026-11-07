@@ -1,5 +1,7 @@
 # TV2 — Tracking, dữ liệu và tích hợp
 
+> **Cập nhật phiên triển khai TV2:** đã có code/schema/migration/session/task/chat và kiểm tra riêng phần TV2. Xem [bàn giao và kết quả kiểm chứng](../TV2_HANDOFF.md). Các mô tả “chưa có mã/chưa chốt” bên dưới là bối cảnh khi lập kế hoạch. Checklist mốc phối hợp vẫn chưa đánh dấu hoàn tất vì TV1/TV3 và vòng sản phẩm chung chưa được tích hợp.
+
 ## Vai trò và phạm vi sở hữu
 
 TV2 làm **UI + API + logic** bảng task dạng danh sách, chat và Coordinator ghi tiến độ/trở ngại. TV2 phụ trách database, migration/seed, session/quyền cơ bản phía server; là đầu mối contracts và tích hợp. Nhánh đề xuất `feat/tracking`, chưa tạo trong phiên tài liệu. TV1 và TV3 vẫn tự viết API của mình.
