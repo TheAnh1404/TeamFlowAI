@@ -1,6 +1,6 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, exists, inArray, isNull, or, sql } from "drizzle-orm";
 import { chatPostInputSchema, checkinInputSchema, defaultNotificationPreference, defaultSchedule, meetingInputSchema, memberPreferenceSchema, notificationPreferenceSchema, reportRequestSchema, settingsInputSchema, workDateSchema, type FeedItem } from "@/contracts/coordinator";
 import type { Session } from "@/server/auth/contracts";
 import { projectMember } from "@/server/auth/access";
@@ -242,17 +242,29 @@ export function createCoordinatorService(db: Database = getDb()) {
         },
         async inbox(session: Session, query: URLSearchParams) {
             const c = cursor(query.get("cursor")), projectId = query.get("projectId");
-            const rows = await db.select({ notification: s.notifications }).from(s.notifications).innerJoin(s.projectMembers, and(eq(s.projectMembers.projectId, s.notifications.projectId), eq(s.projectMembers.userId, session.user.id)))
-                .where(and(eq(s.notifications.recipientUserId, session.user.id), projectId ? eq(s.notifications.projectId, projectId) : undefined, c ? sql `(${s.notifications.createdAt},${s.notifications.id}) < (${c.t}::timestamptz,${c.id})` : undefined)).orderBy(desc(s.notifications.createdAt), desc(s.notifications.id)).limit(51);
-            const count = await db.select({ count: sql<number> `count(*)::int` }).from(s.notifications).innerJoin(s.projectMembers, and(eq(s.projectMembers.projectId, s.notifications.projectId), eq(s.projectMembers.userId, session.user.id))).where(and(eq(s.notifications.recipientUserId, session.user.id), isNull(s.notifications.readAt), projectId ? eq(s.notifications.projectId, projectId) : undefined));
-            const items = rows.slice(0, 50).map(r => r.notification), last = items.at(-1);
+            const memberProject = db.select({ id: s.projectMembers.id }).from(s.projectMembers).where(and(eq(s.projectMembers.projectId, s.notifications.projectId), eq(s.projectMembers.userId, session.user.id)));
+            const mentorProject = db.select({ userId: s.projectMentors.userId }).from(s.projectMentors).where(and(eq(s.projectMentors.projectId, s.notifications.projectId), eq(s.projectMentors.userId, session.user.id)));
+            const visibleToRecipient = or(eq(s.notifications.type, "project_invitation"), exists(memberProject), exists(mentorProject));
+            const scope = and(eq(s.notifications.recipientUserId, session.user.id), visibleToRecipient, projectId ? eq(s.notifications.projectId, projectId) : undefined);
+            const rows = await db.select().from(s.notifications)
+                .where(and(scope, c ? sql `(${s.notifications.createdAt},${s.notifications.id}) < (${c.t}::timestamptz,${c.id})` : undefined)).orderBy(desc(s.notifications.createdAt), desc(s.notifications.id)).limit(51);
+            const count = await db.select({ count: sql<number> `count(*)::int` }).from(s.notifications).where(and(scope, isNull(s.notifications.readAt)));
+            const items = rows.slice(0, 50).map(notification => ({
+                ...notification,
+                text: notification.text ?? notification.message ?? notification.title ?? "Bạn có thông báo mới.",
+                target: notification.target ?? `/app/projects/${encodeURIComponent(notification.projectId)}`,
+            })), last = items.at(-1);
             return { items, unread: count[0].count, cursor: rows.length > 50 && last ? encode(last.createdAt, last.id) : null };
         },
         async readNotification(session: Session, id: string) {
             const [row] = await db.select().from(s.notifications).where(and(eq(s.notifications.id, id), eq(s.notifications.recipientUserId, session.user.id)));
             if (!row)
                 throw notFound();
-            await projectMember(db, session, row.projectId);
+            if (row.type !== "project_invitation") {
+                const [membership] = await db.select({ id: s.projectMembers.id }).from(s.projectMembers).where(and(eq(s.projectMembers.projectId, row.projectId), eq(s.projectMembers.userId, session.user.id)));
+                const [mentor] = await db.select({ userId: s.projectMentors.userId }).from(s.projectMentors).where(and(eq(s.projectMentors.projectId, row.projectId), eq(s.projectMentors.userId, session.user.id)));
+                assert(membership || mentor, 404, "NOT_FOUND", "Không tìm thấy thông báo.");
+            }
             await db.update(s.notifications).set({ readAt: row.readAt ?? new Date().toISOString() }).where(eq(s.notifications.id, id));
             return { read: true };
         },

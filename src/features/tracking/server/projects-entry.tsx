@@ -11,7 +11,8 @@ export async function ProjectsEntry() {
   try {
     session = await sessionProvider.getCurrentSession();
     projects = session ? await listSessionProjects(session) : [];
-  } catch {
+  } catch (cause) {
+    console.error("[ProjectsEntry] Error loading session or projects:", cause);
     return (
       <div className={styles.workspace}>
         <h1>Không thể tải dự án</h1>

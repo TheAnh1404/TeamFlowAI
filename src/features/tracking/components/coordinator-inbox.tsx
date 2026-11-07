@@ -1,52 +1,93 @@
 "use client";
-import { useEffect, useState } from "react";
+
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { coordinatorRequest as api } from "./coordinator-client";
 import styles from "./coordinator.module.css";
+
 type Inbox = {
-    items: {
-        id: string;
-        text: string;
-        target: string;
-        readAt: string | null;
-        projectId: string;
-    }[];
-    unread: number;
-    cursor: string | null;
+  items: { id: string; text: string; target: string; readAt: string | null; projectId: string }[];
+  unread: number;
+  cursor: string | null;
 };
+
 export function CoordinatorInbox() {
-    const [inbox, setInbox] = useState<Inbox>({ items: [], unread: 0, cursor: null }), [error, setError] = useState(""), [token, setToken] = useState<string | null>(null), [message, setMessage] = useState(""), [project, setProject] = useState("");
-    useEffect(() => {
-        let active = true;
-        Promise.resolve().then(() => {
-            if (!active)
-                return;
-            const url = new URL(window.location.href), value = url.searchParams.get("verifyEmail");
-            if (value) {
-                setToken(value);
-                url.searchParams.delete("verifyEmail");
-                window.history.replaceState(null, "", url.pathname + url.search + url.hash);
-            }
-            void api<Inbox>("/api/notifications").then(value => {
-                if (active)
-                    setInbox(value);
-            }).catch(e => {
-                if (active)
-                    setError((e as Error).message);
-            });
-        });
-        return () => { active = false; };
-    }, []);
-    async function verify() {
-        setError("");
-        try {
-            await api("/api/auth/email-verification", "POST", token ? { token } : {});
-            setMessage(token ? "Đã xác minh địa chỉ email." : "Đã lưu yêu cầu gửi email xác minh. Kiểm tra hộp thư sau khi hệ thống xử lý.");
-            setToken(null);
-        }
-        catch (e) {
-            setError((e as Error).message);
-        }
+  const [inbox, setInbox] = useState<Inbox>({ items: [], unread: 0, cursor: null });
+  const [error, setError] = useState("");
+  const [token, setToken] = useState<string | null>(null);
+  const [message, setMessage] = useState("");
+  const [project, setProject] = useState("");
+
+  const refresh = useCallback(async (projectId = project) => {
+    const query = projectId ? `?projectId=${encodeURIComponent(projectId)}` : "";
+    const value = await api<Inbox>(`/api/notifications${query}`);
+    setInbox(value);
+    setError("");
+  }, [project]);
+
+  useEffect(() => {
+    let active = true;
+    const url = new URL(window.location.href);
+    const verifyToken = url.searchParams.get("verifyEmail");
+    if (verifyToken) {
+      url.searchParams.delete("verifyEmail");
+      window.history.replaceState(null, "", url.pathname + url.search + url.hash);
+      Promise.resolve().then(() => { if (active) setToken(verifyToken); });
     }
-    return <div style={{ padding: "12px 24px", borderBottom: "1px solid var(--color-border-subtle)", background: "var(--color-surface)" }}><details><summary>Thông báo <span className={styles.badge}>{inbox.unread} chưa đọc</span></summary><div className={styles.row}><button className={styles.button} onClick={() => void api<Inbox>(`/api/notifications${project ? `?projectId=${encodeURIComponent(project)}` : ""}`).then(setInbox).catch(e => setError((e as Error).message))}>Làm mới thông báo</button><label>Lọc dự án <select className={styles.input} value={project} onChange={e => { setProject(e.target.value); void api<Inbox>(`/api/notifications${e.target.value ? `?projectId=${encodeURIComponent(e.target.value)}` : ""}`).then(setInbox).catch(e => setError((e as Error).message)); }}><option value="">Mọi dự án</option>{[...new Set(inbox.items.map(n => n.projectId))].map(id => <option key={id} value={id}>{id}</option>)}</select></label><button className={styles.button} onClick={() => void verify()}>Yêu cầu xác minh email</button></div><ul className={styles.items}>{inbox.items.map(n => <li key={n.id}><Link href={n.target}>{n.text}</Link>{!n.readAt && <button className={styles.button} onClick={() => void api(`/api/notifications/${n.id}/read`, "POST", {}).then(() => setInbox(old => ({ ...old, unread: Math.max(0, old.unread - 1), items: old.items.map(i => i.id === n.id ? { ...i, readAt: new Date().toISOString() } : i) }))).catch(e => setError((e as Error).message))}>Đã đọc</button>}</li>)}</ul>{inbox.cursor && <button className={styles.button} onClick={() => void api<Inbox>(`/api/notifications?cursor=${encodeURIComponent(inbox.cursor!)}${project ? `&projectId=${encodeURIComponent(project)}` : ""}`).then(next => setInbox(old => ({ ...next, items: [...old.items, ...next.items] }))).catch(e => setError((e as Error).message))}>Tải thông báo cũ</button>}</details>{token && <p>Bạn đang đăng nhập tài khoản nhận liên kết? <button className={`${styles.button} ${styles.primary}`} onClick={() => void verify()}>Xác minh email của tôi</button></p>}{message && <p role="status">{message}</p>}{error && <p role="alert" className={styles.error}>{error}</p>}</div>;
+    const query = project ? `?projectId=${encodeURIComponent(project)}` : "";
+    const load = () => api<Inbox>(`/api/notifications${query}`).then(value => {
+      if (active) { setInbox(value); setError(""); }
+    }).catch(cause => { if (active) setError((cause as Error).message); });
+    void load();
+    const timer = window.setInterval(() => { void load(); }, 30_000);
+    const onFocus = () => { void load(); };
+    window.addEventListener("focus", onFocus);
+    return () => { active = false; window.clearInterval(timer); window.removeEventListener("focus", onFocus); };
+  }, [project]);
+
+  async function verify() {
+    setError("");
+    try {
+      await api("/api/auth/email-verification", "POST", token ? { token } : {});
+      setMessage(token ? "Đã xác minh địa chỉ email." : "Đã lưu yêu cầu gửi email xác minh.");
+      setToken(null);
+    } catch (cause) { setError((cause as Error).message); }
+  }
+
+  async function markRead(id: string) {
+    try {
+      await api(`/api/notifications/${encodeURIComponent(id)}/read`, "POST", {});
+      setInbox(current => ({ ...current, unread: Math.max(0, current.unread - 1), items: current.items.map(item => item.id === id ? { ...item, readAt: new Date().toISOString() } : item) }));
+    } catch (cause) { setError((cause as Error).message); }
+  }
+
+  return <div className="tf-inbox" style={{ position: "relative" }}>
+    <details>
+      <summary>Thông báo <span className={styles.badge} aria-live="polite">{inbox.unread} chưa đọc</span></summary>
+      <div className="tf-inbox-panel" style={{ minWidth: 320, maxWidth: 480, maxHeight: "70vh", overflow: "auto" }}>
+        <h2>Thông báo</h2>
+        <div className={styles.row}>
+          <label>Lọc dự án <select className={styles.input} value={project} onChange={event => { const value = event.target.value; setProject(value); void refresh(value).catch(cause => setError((cause as Error).message)); }}>
+            <option value="">Mọi dự án</option>
+            {[...new Set(inbox.items.map(item => item.projectId))].map(id => <option key={id} value={id}>{id}</option>)}
+          </select></label>
+          <button type="button" className={styles.button} onClick={() => void refresh().catch(cause => setError((cause as Error).message))}>Làm mới</button>
+        </div>
+        {error && <p role="alert" className={styles.error}>{error}</p>}
+        {!inbox.items.length && !error && <p>Chưa có thông báo.</p>}
+        <ul className={styles.items}>{inbox.items.map(item => <li key={item.id}>
+          <Link href={item.target} onClick={() => { if (!item.readAt) void markRead(item.id); }}>{item.text}</Link>
+          {!item.readAt && <button type="button" className={styles.button} onClick={() => void markRead(item.id)}>Đánh dấu đã đọc</button>}
+        </li>)}</ul>
+        {inbox.cursor && <button type="button" className={styles.button} onClick={() => {
+          const query = new URLSearchParams({ cursor: inbox.cursor! });
+          if (project) query.set("projectId", project);
+          void api<Inbox>(`/api/notifications?${query}`).then(next => setInbox(current => ({ ...next, items: [...current.items, ...next.items] }))).catch(cause => setError((cause as Error).message));
+        }}>Tải thông báo cũ</button>}
+        <button type="button" className={styles.button} onClick={() => void verify()}>Yêu cầu xác minh email</button>
+      </div>
+    </details>
+    {token && <p>Bạn có liên kết xác minh email. <button type="button" className={styles.button} onClick={() => void verify()}>Xác minh email</button></p>}
+    {message && <p role="status">{message}</p>}
+  </div>;
 }
