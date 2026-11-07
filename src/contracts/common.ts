@@ -1,9 +1,9 @@
 import { z } from "zod";
 
 // Structural schemas only. Ownership: TV2. Business validation belongs to services.
-export const idSchema = z.string();
+export const idSchema = z.string().trim().min(1).max(128);
 export const instantSchema = z.iso.datetime({ offset: true });
-export const versionSchema = z.number().int();
+export const versionSchema = z.number().int().positive();
 
 export const apiErrorSchema = z.object({
   error: z.object({

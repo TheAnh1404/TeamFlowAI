@@ -1,4 +1,7 @@
-import { notImplementedResponse } from "@/server/http/not-implemented";
-
-// TODO(TV2): implement only in the assigned feature session; no DB/auth/AI here.
-export const GET = notImplementedResponse;
+import { requireSession } from "@/server/auth";
+import { endpoint } from "@/server/http/errors";
+import { trackingService } from "@/features/tracking/server/implementation";
+export const GET = (_request: Request, context: { params: Promise<{ taskId: string }> }) => endpoint(async () => {
+  const session = await requireSession();
+  return trackingService.listProgressUpdates(session, (await context.params).taskId);
+});

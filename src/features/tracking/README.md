@@ -1,16 +1,10 @@
 # tracking — TV2
 
-Scope phiên tính năng sau: Task list/detail shell, chat, Coordinator ghi tiến độ/trở ngại. Trang phụ trách: P05, P06 shell, P07.
+Đã có UI/API/service/query cho P02 dữ liệu/session, P05, P06 shell và P07.
 
-Hiện có interface và public entry; chưa có service/repository implementation, component tính năng, query, AI hay dữ liệu demo.
-
-- Public UI entry an toàn cho client: `index.ts`; hiện chỉ export type từ contracts.
-- Server-only interface: `server/service.ts`, `server/repository.ts`.
-- `components/` giữ chỗ; page adapter mỏng nằm trong `src/app/`.
-- Dependencies: UI shell TV1; Task công bố từ planning; contracts/DB/auth TV2; AI TV3.
-- Không import chéo nội bộ feature; UI của feature khác đi qua public entry.
-- API giữ URL [CONTRACTS](../../../docs/CONTRACTS.md), hiện trả HTTP 501; ownership grouping không thêm prefix URL mới.
-- Nhiệm vụ chưa hoàn thành: [TV2_TRACKING](../../../docs/tasks/TV2_TRACKING.md).
-- Mapping và điểm chốt: [SCAFFOLD_HANDOFF](../../../docs/SCAFFOLD_HANDOFF.md).
-
-TV2 giữ P06 full page; slot nộp/review sau này nhận public UI export từ delivery. Scaffold chưa có slot/component nghiệp vụ hay Drawer.
+- Public UI: `index.ts` export Workbench, TaskDetailPanel, DemoSessionBar, DeliverySlotProps và WorkspaceData.
+- Server entry: `server/index.ts` export trackingService, createTrackingService, trackingReader, loadWorkspace.
+- `server/service.ts` và `server/repository.ts` giữ interface scaffold để tham chiếu; implementation sử dụng store và transaction helpers, không cần caller tự ghép các lệnh ghi riêng lẻ.
+- Xem [bàn giao TV2](../../../docs/TV2_HANDOFF.md) cho cấu hình, migration, quyền, API, retry và điểm gắn TV1/TV3.
+- Neon thật và vòng tích hợp với API planning/delivery chưa được kiểm chứng. Provider AI và nội dung nộp/review vẫn thuộc dependency TV3.
+- Không import chéo nội bộ feature; UI Delivery đi qua public entry và renderDelivery slot.
