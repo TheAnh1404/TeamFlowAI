@@ -36,10 +36,10 @@ export function DeliverySlot({
 }: DeliverySlotProps) {
   const canAccept = currentMember
     ? currentMember.role === "leader" || Boolean(currentMember.canAccept)
-    : true;
+    : false;
   const canSubmit = currentMember
-    ? currentMember.id === task.assigneeMemberId
-    : true;
+    ? currentMember.role === "leader" || currentMember.id === task.assigneeMemberId
+    : false;
 
   return React.createElement(DeliveryWorkspace, {
     task,

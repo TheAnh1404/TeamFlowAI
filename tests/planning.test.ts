@@ -11,6 +11,8 @@ import { createPlanningService } from "../src/features/planning/server/implement
 import { createPlanner } from "../src/features/planning/server/planner";
 import { HttpError } from "../src/server/http/errors";
 import { eq } from "drizzle-orm";
+import { aiProvider } from "../src/server/ai";
+import { createTrackingService } from "../src/features/tracking/server/implementation";
 const pg = new PGlite(), db = drizzle(pg, { schema }) as unknown as Database;
 let leader: Session, member: Session;
 const service = createPlanningService(db, createPlanner(undefined, "mock"));
@@ -26,11 +28,28 @@ before(async () => {
     member = { user: users.find(u => u.id === "demo-tv2")!, memberships: [] };
 });
 after(async () => { await pg.close(); });
+test("shared TV3 Planner publishes tasks read by the TV2 workspace", async () => {
+    const previousKey = process.env.OPENAI_API_KEY;
+    delete process.env.OPENAI_API_KEY;
+    try {
+        const project = await setup();
+        const integrated = createPlanningService(db, createPlanner(aiProvider, ""));
+        const plan = await integrated.generatePlanDraft(leader, project.id);
+        assert.equal(plan.aiMode, "mock");
+        const published = await integrated.publishPlan(leader, plan.id, {expectedVersion:plan.version,approved:true}, {idempotencyKey:crypto.randomUUID()});
+        const visible = await createTrackingService(db).listTasks(member, project.id);
+        assert.deepEqual(visible.map(t=>t.id).sort(), published.tasks.map(t=>t.id).sort());
+        assert(visible.every(t=>t.status === "todo"));
+    } finally {
+        if (previousKey === undefined) delete process.env.OPENAI_API_KEY;
+        else process.env.OPENAI_API_KEY = previousKey;
+    }
+});
 async function setup() { const { project, member: m } = await service.createProject(leader, input); await service.updateProjectMember(leader, project.id, m.id, { skills: ["UI"], availableHoursPerWeek: 10 }); await service.addProjectMember(leader, project.id, { userId: member.user.id, skills: ["API"], availableHoursPerWeek: 10, canAccept: false }); return project; }
 test("draft remains private; versioned edits preserve IDs; publish is atomic, approved and retry-safe", async () => {
     const p = await setup(), plan = await service.generatePlanDraft(leader, p.id);
     assert.equal(plan.aiMode, "mock");
-    assert.equal((await db.select().from(schema.tasks)).length, 0);
+    assert.equal((await db.select().from(schema.tasks).where(eq(schema.tasks.projectId, p.id))).length, 0);
     await assert.rejects(service.getPlan(member, p.id), code("FORBIDDEN"));
     await assert.rejects(service.publishPlan(member, plan.id, { expectedVersion: 1, approved: true }, { idempotencyKey: "publish-key" }), code("FORBIDDEN"));
     await assert.rejects(service.publishPlan(leader, plan.id, { expectedVersion: 1, approved: false }, { idempotencyKey: "publish-key" }), code("VALIDATION_ERROR"));

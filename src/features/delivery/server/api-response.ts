@@ -2,9 +2,10 @@ import "server-only";
 import { ZodError } from "zod";
 import { AiError } from "@/server/ai/errors";
 import { DeliveryServiceError } from "./service";
+import { HttpError } from "@/server/http/errors";
 
 export function handleDeliveryApiError(err: unknown): Response {
-  if (err instanceof DeliveryServiceError) {
+  if (err instanceof DeliveryServiceError || err instanceof HttpError) {
     return Response.json(
       { error: { code: err.code, message: err.message } },
       { status: err.status },

@@ -3,7 +3,7 @@ import { requireSession } from "@/server/auth";
 import { HttpError } from "@/server/http/errors";
 import { routes } from "@/lib/routes";
 import { DemoSessionBar } from "../components/session-bar";
-import { TrackingWorkbench } from "../components/workbench";
+import { IntegratedWorkbench } from "../components/integrated-workbench";
 import { formatTime } from "../model";
 import { loadWorkspace } from "./workspace";
 import styles from "../components/tracking.module.css";
@@ -21,6 +21,6 @@ export async function TrackingPage({ projectId, screen, taskId }: { projectId: s
       ["Công việc", routes.tasks(projectId), screen !== "chat"], ["Kế hoạch", routes.plan(projectId), false],
       ["Chat", routes.chat(projectId), screen === "chat"], ["Báo cáo", routes.reports(projectId), false],
     ].map(([label, href, active]) => <Link key={String(label)} href={String(href)} aria-current={active ? "page" : undefined}>{label}</Link>)}</nav>
-    <TrackingWorkbench data={data} screen={screen} taskId={taskId} />
+    <IntegratedWorkbench data={data} screen={screen} taskId={taskId} />
   </div>;
 }
