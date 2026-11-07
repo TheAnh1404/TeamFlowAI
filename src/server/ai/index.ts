@@ -13,6 +13,7 @@ import {
   generateMockReviewer,
 } from "./mock-generators";
 import { generateReal, isRealAiConfigured } from "./real-provider";
+import {currentAiOverride} from "./context";
 import {
   validatePlannerProposal,
   validateReportProposal,
@@ -33,11 +34,11 @@ export const aiProvider: AiProvider = {
         return { proposal, aiMode: "real" };
       } catch (err: unknown) {
         // Nếu có lỗi từ real AI mà môi trường yêu cầu nghiêm ngặt hoặc không cho fallback thì ném lỗi
-        if (process.env.AI_STRICT_REAL === "true") {
+        if (currentAiOverride()?.mode==="real"||process.env.AI_STRICT_REAL !== "false") {
           throw err;
         }
         // Ghi log nhẹ cảnh báo và fallback sang mock có nhãn minh bạch
-        console.warn(`[AI Provider] Chế độ Real gặp sự cố (${err instanceof Error ? err.message : String(err)}). Chuyển sang Mock có nhãn minh bạch.`);
+        console.warn("[AI Provider] Real provider failed; explicit fallback enabled, returning labeled mock output.");
       }
     }
 

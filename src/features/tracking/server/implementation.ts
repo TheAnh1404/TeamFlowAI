@@ -11,6 +11,7 @@ import { commitMutation, mutationIdentity, replay } from "@/server/db/mutations"
 import { createCoordinator, type Coordinator } from "./coordinator";
 import { trackingReader } from "./store";
 import type { TrackingService } from "./service";
+import {withUserAiSettings} from "@/features/ai-settings/server/service";
 
 const mutable = (task: Task) => ["todo", "in_progress", "blocked"].includes(task.status);
 const canUpdate = (member: ProjectMember, task: Task) => member.role === "leader" || task.assigneeMemberId === member.id;
@@ -28,7 +29,7 @@ export function createTrackingService(db: Database, coordinator: Coordinator = c
       const saved = await replay<ProgressMessageResult>(db, identity); if (saved !== undefined) return saved;
       const availableTasks = await reader.listTasks(projectId);
       if (input.taskId) assert(availableTasks.some((t) => t.id === input.taskId), 422, "VALIDATION_ERROR", "Công việc không thuộc kế hoạch đã công bố của dự án.");
-      const result = await coordinator({ message: { content: input.content, taskId: input.taskId ?? null }, tasks: availableTasks });
+      const result = await withUserAiSettings(db,session,()=>coordinator({ message: { content: input.content, taskId: input.taskId ?? null }, tasks: availableTasks }));
       const proposal = result.proposal;
       const target = availableTasks.find((t) => t.id === proposal.taskId);
       assert(!proposal.taskId || target, 502, "AI_INVALID_OUTPUT", "Coordinator tham chiếu công việc không hợp lệ.");

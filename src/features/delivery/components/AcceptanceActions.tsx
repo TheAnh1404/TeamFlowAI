@@ -4,6 +4,9 @@ import React, { useState } from "react";
 import type { Review } from "@/contracts/review";
 import type { Submission } from "@/contracts/submission";
 import type { Task } from "@/contracts/task";
+import { taskSchema } from "@/contracts";
+import { apiFetch } from "@/lib/api-client";
+import { useMutationKey } from "./use-mutation-key";
 
 interface AcceptanceActionsProps {
   task: Task;
@@ -22,6 +25,7 @@ export function AcceptanceActions({
 }: AcceptanceActionsProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const mutationKey = useMutationKey();
 
   if (task.status === "done") {
     return null;
@@ -39,10 +43,10 @@ export function AcceptanceActions({
     setIsSubmitting(true);
     setError(null);
 
-    const idempotencyKey = `accept_${task.id}_${task.version}_${Date.now()}`;
+    const idempotencyKey = mutationKey({taskId: task.id, version: task.version, submissionId: submission.id});
 
     try {
-      const res = await fetch(`/api/tasks/${encodeURIComponent(task.id)}/accept`, {
+      const result = await apiFetch(`/api/tasks/${encodeURIComponent(task.id)}/accept`, taskSchema, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -54,12 +58,7 @@ export function AcceptanceActions({
         }),
       });
 
-      const body = await res.json();
-      if (!res.ok) {
-        throw new Error(body.error?.message || "Nghiệm thu thất bại.");
-      }
-
-      onAccepted(body.data);
+      onAccepted(result.data);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Đã xảy ra lỗi khi nghiệm thu.");
     } finally {

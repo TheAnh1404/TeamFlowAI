@@ -60,7 +60,7 @@ test("draft remains private; versioned edits preserve IDs; publish is atomic, ap
     const request = { expectedVersion: edited.version, approved: true }, options = { idempotencyKey: "publish-key" };
     const published = await service.publishPlan(leader, plan.id, request, options);
     assert.deepEqual(await service.publishPlan(leader, plan.id, request, options), published);
-    assert.equal((await db.select().from(schema.tasks).where(eq(schema.tasks.projectId, p.id))).length, 2);
+    assert.equal((await db.select().from(schema.tasks).where(eq(schema.tasks.projectId, p.id))).length, plan.draftTasks.length);
     await assert.rejects(service.publishPlan(leader, plan.id, request, { idempotencyKey: "another-key" }), code("INVALID_TRANSITION"));
     await assert.rejects(service.updatePlanDraft(leader, plan.id, { expectedVersion: published.plan.version, draftTasks: plan.draftTasks }), code("INVALID_TRANSITION"));
     assert.equal((await service.getPlan(member, p.id))?.status, "published");
@@ -68,7 +68,7 @@ test("draft remains private; versioned edits preserve IDs; publish is atomic, ap
 test("rejects cycles, foreign IDs, invalid members/deadlines and freezes project inputs", async () => {
     const p = await setup(), plan = await service.generatePlanDraft(leader, p.id), a = plan.draftTasks;
     const edit = (draftTasks: typeof a) => service.updatePlanDraft(leader, plan.id, { expectedVersion: 1, draftTasks });
-    await assert.rejects(edit(a.map((t, i) => ({ ...t, dependencyTaskIds: [a[1 - i].id] }))), code("VALIDATION_ERROR"));
+    await assert.rejects(edit(a.map((t, i) => ({ ...t, dependencyTaskIds: [a[(i+1)%a.length].id] }))), code("VALIDATION_ERROR"));
     await assert.rejects(edit(a.map(t => ({ ...t, assigneeMemberId: "foreign" }))), code("VALIDATION_ERROR"));
     await assert.rejects(edit(a.map(t => ({ ...t, deadline: "2099-01-01T00:00:00Z" }))), code("VALIDATION_ERROR"));
     await assert.rejects(edit(a.map(t => ({ ...t, id: "foreign" }))), code("VALIDATION_ERROR"));

@@ -40,6 +40,7 @@ async function main() {
     assert.equal(await page.locator("script").count(), 1); // user script remains escaped text
     await page.keyboard.press("Escape");
     assert.equal(await page.getByRole("dialog").isVisible(), false);
+    assert.equal(await page.locator("body").getAttribute("data-navigation"), "/app/projects/p1/tasks");
     assert.equal(await taskLink.evaluate((el) => el === document.activeElement), true);
     await taskLink.click(); await page.getByLabel("Bài nộp kiểm thử").fill("draft");
     page.once("dialog", (dialog) => dialog.dismiss()); await page.keyboard.press("Escape");

@@ -1,3 +1,4 @@
+import {readJson} from "@/server/http/errors";
 import { confirmAcceptanceInputSchema } from "@/contracts/submission";
 import { handleDeliveryApiError } from "@/features/delivery/server/api-response";
 import { getDeliverySession } from "@/features/delivery/server/auth-helper";
@@ -10,8 +11,7 @@ export async function POST(
   try {
     const { taskId } = await params;
     const session = await getDeliverySession(request);
-    const body = await request.json();
-    const input = confirmAcceptanceInputSchema.parse(body);
+    const input = await readJson(request, confirmAcceptanceInputSchema);
     const idempotencyKey = request.headers.get("Idempotency-Key") || "";
 
     const task = await deliveryService.confirmAcceptance(session, taskId, input, { idempotencyKey });

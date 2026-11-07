@@ -10,7 +10,7 @@ export default async function Page() {
     let data;
     try {
         const session = await requireSession();
-        data = { actorId: session.user.id, users: await getDb().select().from(users).where(inArray(users.id, [...Object.values(DEMO_ACCOUNTS), session.user.id])) };
+        data = { actorId: session.user.id, users: await getDb().select().from(users).where(inArray(users.id, [...Object.values(DEMO_ACCOUNTS).filter(id=>id!==DEMO_ACCOUNTS.MENTOR), session.user.id])) };
     }
     catch (e) {
         return <main className="tf-page"><h1>Bắt đầu dự án</h1><p role="alert">{e instanceof HttpError ? e.message : "Chưa đọc được dữ liệu. Kiểm tra cấu hình Neon và migration."}</p><Link className="tf-button" href="/app">Về danh sách dự án để đăng nhập</Link></main>;

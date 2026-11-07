@@ -1,62 +1,22 @@
 "use client";
-
-import React from "react";
-import type { SourceRef } from "@/contracts/report";
-
-interface ReportSourcesDrawerProps {
-  sourceRef: SourceRef | null;
-  onClose: () => void;
+import {useEffect,useRef,useState} from "react";
+import {z} from "zod";
+import {sourceRefSchema,type SourceRef} from "@/contracts/report";
+import {apiFetch} from "@/lib/api-client";
+const sourceSchema=z.object({sourceRef:sourceRefSchema,reportAsOf:z.string(),currentState:z.boolean(),record:z.record(z.string(),z.unknown())});
+export function ReportSourcesDrawer({sourceRef,reportId,onClose}:{sourceRef:SourceRef|null;reportId?:string;onClose:()=>void}){
+  const dialog=useRef<HTMLDialogElement>(null);
+  const [loaded,setLoaded]=useState<{key:string;data:z.infer<typeof sourceSchema>}|null>(null),[error,setError]=useState<{key:string;message:string}|null>(null);
+  const key=sourceRef&&reportId?`${reportId}:${sourceRef.entity}:${sourceRef.id}`:"";
+  useEffect(()=>{
+    if(!sourceRef||!reportId||!key)return;
+    const controller=new AbortController();dialog.current?.showModal();
+    apiFetch(`/api/reports/${encodeURIComponent(reportId)}/source?entity=${encodeURIComponent(sourceRef.entity)}&id=${encodeURIComponent(sourceRef.id)}`,sourceSchema,{signal:controller.signal})
+      .then(result=>{if(!controller.signal.aborted){setLoaded({key,data:result.data});setError(null);}})
+      .catch(e=>{if(!controller.signal.aborted)setError({key,message:e instanceof Error?e.message:"Chưa tải được nguồn dẫn chứng."});});
+    return()=>controller.abort();
+  },[sourceRef,reportId,key]);
+  if(!sourceRef||!reportId)return null;
+  const data=loaded?.key===key?loaded.data:null;
+  return <dialog ref={dialog} className="tf-source-dialog" aria-labelledby="source-title" onCancel={e=>{e.preventDefault();onClose();}}><div className="tf-row"><h2 id="source-title">Nguồn dẫn chứng · {sourceRef.entity}</h2><button className="tf-button secondary" autoFocus type="button" onClick={onClose}>Đóng</button></div>{error?.key===key?<p role="alert">{error.message}</p>:data?<><p>{data.currentState?"Đây là trạng thái công việc hiện tại; số liệu báo cáo vẫn giữ nguyên tại mốc đã lưu.":"Đây là bản ghi nguồn đã lưu, được tham chiếu trong báo cáo."}</p><pre>{JSON.stringify(data.record,null,2)}</pre></>:<p role="status">Đang tải nguồn dẫn chứng…</p>}</dialog>;
 }
-
-export function ReportSourcesDrawer({ sourceRef, onClose }: ReportSourcesDrawerProps) {
-  if (!sourceRef) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-xs">
-      <div className="w-full max-w-lg rounded-xl border border-[var(--color-border-subtle)] bg-[var(--color-surface)] p-6 shadow-xl animate-in fade-in zoom-in-95 duration-150">
-        <div className="flex items-center justify-between border-b border-[var(--color-border-subtle)] pb-3">
-          <div className="flex items-center gap-2">
-            <span className="rounded bg-[var(--color-primary-soft)] px-2 py-0.5 text-xs font-bold text-[var(--color-primary)]">
-              {sourceRef.entity}
-            </span>
-            <h3 className="text-base font-semibold text-[var(--color-text-primary)]">
-              Chi tiết nguồn dẫn chứng #{sourceRef.id}
-            </h3>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded p-1 text-[var(--color-text-muted)] hover:bg-[var(--color-surface-subtle)] hover:text-[var(--color-text-primary)]"
-          >
-            ✕
-          </button>
-        </div>
-
-        <div className="my-4 space-y-3 text-sm text-[var(--color-text-secondary)]">
-          <div className="rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface-subtle)] p-3">
-            <div className="text-xs font-semibold text-[var(--color-text-muted)]">Loại thực thể:</div>
-            <div className="font-medium text-[var(--color-text-primary)]">{sourceRef.entity}</div>
-          </div>
-          <div className="rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface-subtle)] p-3">
-            <div className="text-xs font-semibold text-[var(--color-text-muted)]">Mã định danh (ID):</div>
-            <div className="font-mono text-xs text-[var(--color-text-primary)]">{sourceRef.id}</div>
-          </div>
-          <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">
-            Dữ liệu nguồn được chụp lại tại mốc asOf của báo cáo tuần để đảm bảo tính nhất quán lịch sử và không bị sai lệch khi công việc thay đổi trạng thái sau đó.
-          </p>
-        </div>
-
-        <div className="flex justify-end pt-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-md bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-on-primary)] transition-colors hover:bg-[var(--color-primary-hover)]"
-          >
-            Đóng
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-

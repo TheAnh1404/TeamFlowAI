@@ -7,6 +7,7 @@ import { IntegratedWorkbench } from "../components/integrated-workbench";
 import { formatTime } from "../model";
 import { loadWorkspace } from "./workspace";
 import styles from "../components/tracking.module.css";
+import { MentorManagement } from "@/features/supervision/components/mentor-management";
 
 export async function TrackingPage({ projectId, screen, taskId }: { projectId: string; screen: "board" | "chat" | "task"; taskId?: string }) {
   let session, data;
@@ -21,6 +22,7 @@ export async function TrackingPage({ projectId, screen, taskId }: { projectId: s
       ["Công việc", routes.tasks(projectId), screen !== "chat"], ["Kế hoạch", routes.plan(projectId), false],
       ["Chat", routes.chat(projectId), screen === "chat"], ["Báo cáo", routes.reports(projectId), false],
     ].map(([label, href, active]) => <Link key={String(label)} href={String(href)} aria-current={active ? "page" : undefined}>{label}</Link>)}</nav>
+    {data.actor.role === "leader" && <MentorManagement projectId={projectId} memberUserIds={data.members.map(m=>m.user.id)}/>}
     <IntegratedWorkbench data={data} screen={screen} taskId={taskId} />
   </div>;
 }

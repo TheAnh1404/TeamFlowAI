@@ -49,7 +49,7 @@ export function ChatPanel({ data, onOpenTask }: { data: WorkspaceData; onOpenTas
     </div>
     {newMessages && <button type="button" onClick={() => { atBottom.current = true; feed.current?.scrollTo({ top: feed.current.scrollHeight }); setNewMessages(false); }}>Có tin nhắn mới ↓</button>}
     <form className={styles.composer} onSubmit={submit}>
-      <label>Công việc liên quan (không bắt buộc)<select value={taskId} onChange={(e) => setTaskId(e.target.value)} disabled={busy}><option value="">Để Coordinator hỏi lại khi chưa rõ</option>{data.tasks.map((t) => <option key={t.id} value={t.id}>{t.title}</option>)}</select></label>
+      <label>Công việc liên quan (không bắt buộc)<select aria-label="Công việc liên quan (không bắt buộc)" value={taskId} onChange={(e) => setTaskId(e.target.value)} disabled={busy}><option value="">Để Coordinator hỏi lại khi chưa rõ</option>{data.tasks.map((t) => <option key={t.id} value={t.id}>{t.title}</option>)}</select></label>
       <label>Nội dung cập nhật<textarea rows={3} maxLength={8000} value={content} disabled={busy} required onChange={(e) => setContent(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing && e.keyCode !== 229) { e.preventDefault(); void submit(); } }} /></label>
       <div className={styles.header}><small className={styles.muted}>Enter để gửi · Shift + Enter để xuống dòng. Chat không tự nghiệm thu hoàn thành.</small><button type="submit" className={styles.primary} disabled={busy || !content.trim()}>{busy ? "Đang ghi nhận…" : error ? "Gửi lại" : "Gửi"}</button></div>
       {error && <p role="alert" className={`${styles.notice} ${styles.error}`}>{error}</p>}
@@ -73,9 +73,9 @@ function ResolveForm({ message, data }: { message: Message; data: WorkspaceData 
     finally { pending.current = false; setBusy(false); }
   }
   return <form className={styles.composer} onSubmit={submit}>
-    <label>Chọn công việc cần cập nhật<select value={id} onChange={(e) => setId(e.target.value)} required disabled={busy}><option value="">Chọn công việc…</option>{candidates.map((t) => <option key={t.id} value={t.id}>{t.title}</option>)}</select></label>
-    <label>Trạng thái<select value={status} onChange={(e) => setStatus(e.target.value as typeof status)} disabled={busy}><option value="blocked">Bị chặn</option><option value="in_progress">Đang làm / tiếp tục</option></select></label>
-    {status === "blocked" && <label>Mô tả trở ngại<textarea value={blocker} required maxLength={2000} onChange={(e) => setBlocker(e.target.value)} disabled={busy} /></label>}
+    <label>Chọn công việc cần cập nhật<select aria-label="Chọn công việc cần cập nhật" value={id} onChange={(e) => setId(e.target.value)} required disabled={busy}><option value="">Chọn công việc…</option>{candidates.map((t) => <option key={t.id} value={t.id}>{t.title}</option>)}</select></label>
+    <label>Trạng thái<select aria-label="Trạng thái cập nhật" value={status} onChange={(e) => setStatus(e.target.value as typeof status)} disabled={busy}><option value="blocked">Bị chặn</option><option value="in_progress">Đang làm / tiếp tục</option></select></label>
+    {status === "blocked" && <label>Mô tả trở ngại<textarea aria-label="Mô tả trở ngại" value={blocker} required maxLength={2000} onChange={(e) => setBlocker(e.target.value)} disabled={busy} /></label>}
     <button type="submit" disabled={busy || !id || (status === "blocked" && !blocker.trim())}>{busy ? "Đang ghi nhận…" : "Xác nhận cập nhật"}</button>
     {error && <div role="alert" className={styles.error}>{error}<br /><button type="button" onClick={() => router.refresh()}>Tải lại dữ liệu</button></div>}
   </form>;

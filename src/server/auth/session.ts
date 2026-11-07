@@ -7,7 +7,7 @@ import { assert } from "@/server/http/errors";
 import type { Session } from "./contracts";
 
 export const SESSION_COOKIE = "teamflow_session";
-export const DEMO_ACCOUNTS = { TV1: "demo-tv1", TV2: "demo-tv2", TV3: "demo-tv3" } as const;
+export const DEMO_ACCOUNTS = { TV1: "demo-tv1", TV2: "demo-tv2", TV3: "demo-tv3", MENTOR: "demo-mentor" } as const;
 const digest = (value: string) => createHash("sha256").update(value).digest("hex");
 export async function findSession(db: Database, token?: string): Promise<Session | null> {
   if (!token || !/^[a-f0-9]{64}$/.test(token)) return null;

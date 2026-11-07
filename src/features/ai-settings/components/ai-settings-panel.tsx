@@ -1,0 +1,36 @@
+"use client";
+import {useEffect,useState} from "react";
+import {apiFetch} from "@/lib/api-client";
+import {Alert,Button,Badge} from "@/components/ui/primitives";
+import {aiSettingsStatusSchema,connectionCheckSchema,type AiSettingsStatus,type ConnectionCheck} from "../contracts";
+const labels={planner:"Planner · Lập kế hoạch",coordinator:"Coordinator · Theo dõi qua chat",reviewer:"Reviewer · Đối chiếu bài nộp",weekly_report:"Báo cáo tuần · Tổng hợp theo nguồn"};
+
+export function AiSettingsPanel(){
+  const [status,setStatus]=useState<AiSettingsStatus|null>(null),[apiKey,setApiKey]=useState(""),[model,setModel]=useState("gpt-4o-mini");
+  const [mode,setMode]=useState<AiSettingsStatus["mode"]>("inherit"),[check,setCheck]=useState<ConnectionCheck|null>(null);
+  const [models,setModels]=useState<string[]>([]),[busy,setBusy]=useState<string|null>("load"),[error,setError]=useState(""),[notice,setNotice]=useState("");
+  useEffect(()=>{
+    const controller=new AbortController();
+    apiFetch("/api/ai/settings",aiSettingsStatusSchema,{signal:controller.signal})
+      .then(r=>{if(!controller.signal.aborted){setStatus(r.data);setMode(r.data.mode);setModel(r.data.model);setCheck(r.data.lastCheck);}})
+      .catch(e=>{if(!controller.signal.aborted)setError(e instanceof Error?e.message:"Chưa tải được cấu hình AI.");})
+      .finally(()=>{if(!controller.signal.aborted)setBusy(null);});
+    return()=>controller.abort();
+  },[]);
+  async function save(){setBusy("save");setError("");setNotice("");try{
+    const result=await apiFetch("/api/ai/settings",aiSettingsStatusSchema,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({model,mode,...(apiKey.trim()?{apiKey:apiKey.trim()}:{})})});
+    setStatus(result.data);setApiKey("");setCheck(result.data.lastCheck);setNotice("Đã lưu cấu hình AI cho tài khoản của bạn. Khóa được mã hóa ở máy chủ.");
+  }catch(e){setError(e instanceof Error?e.message:"Chưa lưu được cấu hình.");}finally{setBusy(null);}}
+  async function run(test:"key"|"agents"){setBusy(test);setError("");setNotice("");try{
+    const result=await apiFetch("/api/ai/settings/check",connectionCheckSchema,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model,test,...(apiKey.trim()?{apiKey:apiKey.trim()}:{})})});
+    setCheck(result.data);if(result.data.models.length)setModels(result.data.models);
+  }catch(e){setError(e instanceof Error?e.message:"Chưa kiểm tra được kết nối AI.");}finally{setBusy(null);}}
+  async function remove(){if(!window.confirm("Xóa API key và cấu hình riêng? Các yêu cầu mới sẽ theo cấu hình máy chủ."))return;setBusy("remove");setError("");try{
+    const result=await apiFetch("/api/ai/settings",aiSettingsStatusSchema,{method:"DELETE"});setStatus(result.data);setMode(result.data.mode);setModel(result.data.model);setApiKey("");setCheck(null);setNotice("Đã xóa API key và cấu hình riêng của bạn.");
+  }catch(e){setError(e instanceof Error?e.message:"Chưa xóa được cấu hình.");}finally{setBusy(null);}}
+  return <main className="tf-page"><p className="tf-eyebrow">KẾT NỐI TRỢ LÝ</p><div className="tf-row"><h1>Cấu hình AI</h1><Badge>{status?.hasKey?"Đã lưu khóa · Được che":"Chưa lưu khóa riêng"}</Badge></div><p>Nhập OpenAI API key tại đây, không gửi khóa trong chat. Cấu hình áp dụng cho các yêu cầu AI bạn thực hiện; tài khoản khác dùng cấu hình của họ hoặc của máy chủ.</p>{error&&<Alert>{error}</Alert>}{notice&&<p role="status">{notice}</p>}{status&&!status.canSave&&<Alert>Máy chủ chưa bật kho khóa an toàn. Người vận hành cần cấu hình khóa mã hóa trước khi lưu; bạn vẫn có thể kiểm tra khóa chưa lưu.</Alert>}
+    <form className="tf-card" onSubmit={e=>{e.preventDefault();void save();}}><h2>Khóa và model</h2><label>OpenAI API key<input aria-label="OpenAI API key" type="password" autoComplete="off" spellCheck={false} maxLength={1024} value={apiKey} onChange={e=>{setApiKey(e.target.value);setCheck(null);setNotice("");}} disabled={!!busy} placeholder={status?.hasKey?"Để trống để giữ khóa đã lưu; nhập khóa mới để thay":"Dán API key của bạn"}/></label><p className="tf-muted">Khóa không được lưu trong trình duyệt và không được gửi lại trong phản hồi. Khi đã lưu, ô này luôn để trống.</p><label>Model ID<input aria-label="Model ID" list="openai-models" value={model} maxLength={120} onChange={e=>{setModel(e.target.value);setCheck(null);}} disabled={!!busy} required/><datalist id="openai-models">{models.map(m=><option key={m} value={m}/>)}</datalist></label><p className="tf-muted">Giữ hoặc nhập model bạn được cấp quyền. Sau khi kiểm tra khóa, có thể chọn từ danh sách tài khoản. Model phải hỗ trợ Chat Completions và phản hồi JSON để chạy các trợ lý hiện tại.</p><label>Chế độ cho tài khoản của bạn<select aria-label="Chế độ AI" value={mode} onChange={e=>setMode(e.target.value as AiSettingsStatus["mode"])} disabled={!!busy}><option value="inherit">Theo cấu hình máy chủ</option><option value="mock">Dùng mẫu · Không gọi OpenAI</option><option value="real">Dùng OpenAI thật với khóa của tôi</option></select></label><p>Khi bật OpenAI thật, thông tin cần cho tác vụ bạn yêu cầu sẽ được gửi đến OpenAI và có thể phát sinh phí API. Kết quả cũ vẫn giữ nguyên nhãn mẫu/thật đã lưu.</p><div className="tf-actions"><Button disabled={!!busy||!status?.canSave}>{busy==="save"?"Đang lưu…":"Lưu cấu hình"}</Button><Button type="button" className="secondary" disabled={!!busy||!status?.hasKey} onClick={()=>void remove()}>Xóa khóa và cấu hình riêng</Button></div></form>
+    <section className="tf-card"><h2>Kiểm tra kết nối</h2><p><strong>Kiểm tra khóa/model</strong> đọc danh sách model từ OpenAI để xác thực khóa và quyền thấy model, chưa chứng minh quota hoặc khả năng tạo nội dung.</p><Button type="button" className="secondary" disabled={!!busy||(!apiKey.trim()&&!status?.hasKey)} onClick={()=>void run("key")}>{busy==="key"?"Đang kiểm tra khóa…":"Kiểm tra khóa và model"}</Button><p style={{marginTop:20}}><strong>Chạy thử các trợ lý</strong> gửi tối đa 4 yêu cầu tạo nội dung bằng dữ liệu kiểm tra, không dùng nội dung dự án. Có thể phát sinh phí API. Kết quả chỉ báo sẵn sàng khi API thật trả đúng cấu trúc; không thay bằng phản hồi mẫu.</p><Button type="button" disabled={!!busy||(!apiKey.trim()&&!status?.hasKey)} onClick={()=>void run("agents")}>{busy==="agents"?"Đang chạy thử các trợ lý…":"Chạy thử 4 trợ lý · Có thể tính phí"}</Button>
+      {check&&<div className="tf-card" role="status" style={{marginTop:20}}><Badge>{check.ok?"Kiểm tra đạt":"Cần kiểm tra lại"}</Badge><p>{check.message}</p><p className="tf-muted">Lần kiểm tra: {new Date(check.checkedAt).toLocaleString("vi-VN")}</p><ul>{Object.entries(labels).map(([kind,label])=>{const agent=check.agents.find(a=>a.agent===kind);return <li key={kind}><strong>{label}</strong>: {agent?(agent.ok?"Kết nối đạt":"Chưa đạt"):"Chưa chạy thử"}{agent&&<p>{agent.message}</p>}</li>;})}</ul></div>}
+    </section><p><a href="https://platform.openai.com/api-keys" target="_blank" rel="noreferrer">Quản lý API key trên OpenAI</a> · <a href="https://developers.openai.com/api/reference/resources/models/methods/list" target="_blank" rel="noreferrer">Tài liệu kiểm tra danh sách model</a></p>{busy&&<p role="status">{busy==="agents"?"Đang nhận phản hồi API thật; thời gian phụ thuộc model và kết nối.":"Đang xử lý…"}</p>}</main>;
+}

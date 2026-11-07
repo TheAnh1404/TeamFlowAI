@@ -11,6 +11,7 @@ import { commitMutation, mutationIdentity } from "@/server/db/mutations";
 import { draftProblems } from "../validation";
 import { createPlanner } from "./planner";
 import type { PlanningService } from "./service";
+import {withUserAiSettings} from "@/features/ai-settings/server/service";
 async function access(db: DataConnection, session: Session, id: string, leader = false) {
     const member = await projectMember(db, session, id);
     assert(!leader || member.role === "leader", 403, "FORBIDDEN", "Chỉ trưởng nhóm được thay đổi kế hoạch.");
@@ -87,7 +88,7 @@ export function createPlanningService(db: Database, planner = createPlanner()): 
             const snapshot = await db.transaction(async (tx) => { await lockProject(tx, id); await noPlan(tx, id); return details(tx, id); });
             validateProject(snapshot.project);
             assert(snapshot.members.every(m => m.skills.length && m.availableHoursPerWeek > 0), 422, "VALIDATION_ERROR", "Bổ sung kỹ năng và giờ khả dụng cho mọi thành viên.");
-            const result = await planner(snapshot);
+            const result = await withUserAiSettings(db,s,()=>planner(snapshot));
             const proposals = result.proposal.tasks;
             const keys = new Map(proposals.map(t => [t.tempKey, randomUUID()]));
             assert(keys.size === proposals.length, 502, "AI_INVALID_OUTPUT", "Planner trả khóa công việc trùng.");

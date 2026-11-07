@@ -1,17 +1,20 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { SourceRef, WeeklyReport } from "@/contracts/report";
 import { routes } from "@/lib/routes";
 import { formatIsoDate } from "@/lib/utils";
 import { ReportSourcesDrawer } from "./ReportSourcesDrawer";
+import { weeklyReportSchema } from "@/contracts";
+import { apiFetch } from "@/lib/api-client";
 
 interface WeeklyReportViewProps {
   projectId: string;
+  canGenerate?: boolean;
 }
 
-export function WeeklyReportView({ projectId }: WeeklyReportViewProps) {
+export function WeeklyReportView({ projectId, canGenerate=false }: WeeklyReportViewProps) {
   const [reports, setReports] = useState<WeeklyReport[]>([]);
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -27,6 +30,7 @@ export function WeeklyReportView({ projectId }: WeeklyReportViewProps) {
     return d.toISOString().slice(0, 10);
   });
   const [periodEnd, setPeriodEnd] = useState(() => new Date().toISOString().slice(0, 10));
+  const pendingRequest = useRef<{signature: string; body: string; key: string} | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -63,27 +67,24 @@ export function WeeklyReportView({ projectId }: WeeklyReportViewProps) {
     setIsGenerating(true);
     setError(null);
 
-    const idempotencyKey = `report_${projectId}_${Date.now()}`;
-
     try {
-      const res = await fetch(`/api/projects/${encodeURIComponent(projectId)}/reports`, {
+      const signature = JSON.stringify({projectId, periodStart, periodEnd});
+      if (pendingRequest.current?.signature !== signature) {
+        const start = new Date(periodStart + "T00:00:00+07:00").toISOString();
+        const end = new Date(Math.min(new Date(periodEnd + "T00:00:00+07:00").getTime() + 86400000, Date.now())).toISOString();
+        pendingRequest.current = {signature, key: crypto.randomUUID(), body: JSON.stringify({periodStart: start, periodEnd: end})};
+      }
+      const result = await apiFetch(`/api/projects/${encodeURIComponent(projectId)}/reports`, weeklyReportSchema, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Idempotency-Key": idempotencyKey,
+          "Idempotency-Key": pendingRequest.current.key,
         },
-        body: JSON.stringify({
-          periodStart: new Date(periodStart).toISOString(),
-          periodEnd: new Date(periodEnd + "T23:59:59.999Z").toISOString(),
-        }),
+        body: pendingRequest.current.body,
       });
 
-      const body = await res.json();
-      if (!res.ok) {
-        throw new Error(body.error?.message || "Tạo báo cáo tuần thất bại.");
-      }
-
-      const newReport: WeeklyReport = body.data;
+      const newReport: WeeklyReport = result.data;
+      pendingRequest.current = null;
       setReports((prev) => [newReport, ...prev]);
       setSelectedReportId(newReport.id);
       setShowCreateModal(false);
@@ -159,13 +160,13 @@ export function WeeklyReportView({ projectId }: WeeklyReportViewProps) {
           )}
         </div>
 
-        <button
+        {canGenerate && <button
           type="button"
           onClick={() => setShowCreateModal(true)}
           className="inline-flex items-center justify-center rounded-md bg-[var(--color-primary)] px-4 py-2 text-xs font-semibold text-[var(--color-on-primary)] transition-colors hover:bg-[var(--color-primary-hover)] shadow-xs"
         >
           + Tạo báo cáo tuần mới
-        </button>
+        </button>}
       </div>
 
       {/* 3. Empty State */}
@@ -212,7 +213,7 @@ export function WeeklyReportView({ projectId }: WeeklyReportViewProps) {
           {/* Backend Metrics Grid */}
           <div>
             <h2 className="mb-3 text-sm font-bold uppercase tracking-wider text-[var(--color-text-secondary)]">
-              1. Số liệu khách quan (Backend tính toán)
+              1. Số liệu khách quan (đã lưu từ dự án)
             </h2>
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
               <div className="rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-surface)] p-4 shadow-xs">
@@ -292,68 +293,14 @@ export function WeeklyReportView({ projectId }: WeeklyReportViewProps) {
             </div>
           </div>
 
-          {/* Member Activity Table */}
-          <div className="rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-surface)] p-6 shadow-xs">
-            <h2 className="mb-4 text-base font-bold text-[var(--color-text-primary)]">
-              3. Bảng hoạt động thành viên trong kỳ
-            </h2>
-            <div className="overflow-x-auto rounded-md border border-[var(--color-border-subtle)]">
-              <table className="w-full text-left text-sm">
-                <thead className="bg-[var(--color-surface-subtle)] text-xs font-semibold text-[var(--color-text-secondary)]">
-                  <tr>
-                    <th className="p-3">Thành viên</th>
-                    <th className="p-3">Việc đã nghiệm thu</th>
-                    <th className="p-3">Việc chờ review</th>
-                    <th className="p-3">Trở ngại ghi nhận</th>
-                    <th className="p-3">Cập nhật trong kỳ</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[var(--color-border-subtle)] text-xs">
-                  <tr className="hover:bg-[var(--color-surface-subtle)]">
-                    <td className="p-3 font-semibold text-[var(--color-text-primary)]">
-                      Lê Thành Viên 3 (TV3)
-                    </td>
-                    <td className="p-3 text-[var(--color-status-done-fg)] font-medium">
-                      {selectedReport.metrics.acceptedOnTimeTotal > 0 ? "1 việc" : "—"}
-                    </td>
-                    <td className="p-3 text-[var(--color-status-in-review-fg)] font-medium">
-                      {selectedReport.metrics.statusCounts.in_review > 0 ? "1 việc (t1)" : "—"}
-                    </td>
-                    <td className="p-3 text-[var(--color-status-blocked-fg)] font-medium">
-                      {selectedReport.metrics.statusCounts.blocked > 0 ? "Có trở ngại" : "Không có"}
-                    </td>
-                    <td className="p-3 text-[var(--color-text-muted)]">
-                      {selectedReport.metrics.submissionsInPeriodTotal > 0
-                        ? `Có ${selectedReport.metrics.submissionsInPeriodTotal} bài nộp`
-                        : "Chưa có dữ liệu trong kỳ"}
-                    </td>
-                  </tr>
-                  <tr className="hover:bg-[var(--color-surface-subtle)]">
-                    <td className="p-3 font-semibold text-[var(--color-text-primary)]">
-                      Trần Thành Viên 2 (TV2)
-                    </td>
-                    <td className="p-3 text-[var(--color-text-muted)]">—</td>
-                    <td className="p-3 text-[var(--color-text-muted)]">—</td>
-                    <td className="p-3 text-[var(--color-text-muted)]">Không có</td>
-                    <td className="p-3 text-[var(--color-text-muted)]">
-                      <span className="inline-flex items-center gap-1 text-[var(--color-text-muted)]">
-                        ⚪ Chưa có dữ liệu trong kỳ
-                      </span>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-            <p className="mt-2 text-[11px] italic text-[var(--color-text-muted)]">
-              * Ghi chú: &ldquo;Chưa có dữ liệu trong kỳ&rdquo; là trạng thái trung tính thể hiện không phát sinh lượt nộp hay tin nhắn trong khoảng xét duyệt, không đánh giá năng lực hay thái độ làm việc.
-            </p>
-          </div>
+          <section className="tf-card"><h2>3. Công việc theo trạng thái tại mốc báo cáo</h2><ul>{Object.entries(selectedReport.metrics.statusCounts).map(([status,count])=><li key={status}>{({todo:"Chưa bắt đầu",in_progress:"Đang làm",blocked:"Bị chặn",in_review:"Chờ nghiệm thu",changes_requested:"Cần chỉnh sửa",done:"Đã hoàn thành"} as Record<string,string>)[status]}: {count}</li>)}</ul></section>
         </div>
       )}
 
       {/* Drawer xem chi tiết nguồn dẫn chứng */}
       <ReportSourcesDrawer
         sourceRef={activeSourceRef}
+        reportId={selectedReport?.id}
         onClose={() => setActiveSourceRef(null)}
       />
 
@@ -380,7 +327,7 @@ export function WeeklyReportView({ projectId }: WeeklyReportViewProps) {
             <div className="my-4 space-y-4">
               <div>
                 <label className="mb-1 block text-xs font-semibold text-[var(--color-text-secondary)]">
-                  Ngày bắt đầu kỳ (periodStart)
+                  Ngày bắt đầu kỳ · giờ Việt Nam
                 </label>
                 <input
                   type="date"
@@ -393,7 +340,7 @@ export function WeeklyReportView({ projectId }: WeeklyReportViewProps) {
 
               <div>
                 <label className="mb-1 block text-xs font-semibold text-[var(--color-text-secondary)]">
-                  Ngày kết thúc kỳ (periodEnd)
+                  Ngày kết thúc kỳ · giờ Việt Nam
                 </label>
                 <input
                   type="date"

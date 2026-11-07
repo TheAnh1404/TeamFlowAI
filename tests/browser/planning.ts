@@ -27,7 +27,11 @@ async function main() {
         await page.route("**/api/**", async (route) => {
             const req = route.request(), url = new URL(req.url()), body = req.postDataJSON();
             let data: unknown;
-            if (url.pathname === "/api/projects") {
+            if (url.pathname === "/api/notifications") {
+                data=[];
+            } else if (url.pathname === "/api/planning/intake") {
+                data={mode:"guided_review",summary:"Làm rõ phạm vi trước khi phân việc.",questions:[{id:"scope",question:"Phạm vi cần bàn giao?",hint:"Nêu đầu ra và điều kiện kiểm tra."}],allocationNotes:["Trưởng nhóm kiểm tra trước khi công bố."]};
+            } else if (url.pathname === "/api/projects") {
                 projectCreates++; data = {project,member:members[0]};
             } else if (url.pathname === "/api/projects/p1") {
                 data = {project,members};
@@ -82,6 +86,8 @@ async function main() {
         for (const input of await page.getByLabel("Kỹ năng", { exact: true }).all())
             await input.fill("Software");
         await page.getByRole("button", { name: "Tiếp tục" }).click();
+        await page.getByRole("button", { name: "Rà soát yêu cầu", exact: true }).click();
+        await page.getByLabel("Phạm vi cần bàn giao?",{exact:false}).fill("Bản demo có thể đăng nhập, tạo dự án và công bố công việc; mentor xác nhận.");
         await page.getByRole("button", { name: "Tạo kế hoạch nháp", exact: true }).click();
         await page.getByRole("alert").waitFor();
         assert(await page.getByText("Ra mắt demo", { exact: true }).isVisible());
@@ -90,7 +96,49 @@ async function main() {
         assert.equal(projectCreates,1); assert.equal(plannerCalls,2);
         assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
         await page.screenshot({ path: ".cache/planning-ui/wizard-mobile.png", fullPage: true });
-        console.log("Planning browser: save/version, publish confirmation/Escape, navigation, error preservation and responsive 360px passed (fixture API).");
+        const submissionKeys: string[] = [];
+        await page.route("**/api/tasks/t1/submissions", async route => {
+            if(route.request().method()==="GET"){await route.fulfill({json:{data:[]}});return;}
+            submissionKeys.push(route.request().headers()["idempotency-key"]);
+            if(submissionKeys.length===1){await route.fulfill({json:{data:{}}});return;}
+            const input=route.request().postDataJSON();
+            const task={id:"t1",title:"Công việc 1",description:"Chuẩn bị demo",assigneeMemberId:"m1",deadline:project.deadline,criteria:[{id:"c1",text:"Có bản demo để kiểm tra"}],dependencyTaskIds:[],projectId:"p1",planId:"plan1",status:"in_review",version:2,acceptedSubmissionId:null,acceptedByMemberId:null,acceptedAt:null,createdAt:project.createdAt};
+            await route.fulfill({json:{data:{task,submission:{id:"s1",projectId:"p1",taskId:"t1",authorMemberId:"m1",revision:1,contentType:input.contentType,content:input.content,criteriaSnapshot:task.criteria,submittedAt:new Date().toISOString()}}}});
+        });
+        await page.route("**/api/submissions/s1/review",route=>route.fulfill({json:{data:null}}));
+        await page.goto(`http://127.0.0.1:${a.port}/?screen=delivery`);
+        const content=page.getByLabel("Nội dung bài nộp (Bắt buộc)");
+        await content.fill("Bằng chứng cần được giữ lại khi phản hồi server không hợp lệ.");
+        await page.getByRole("button",{name:"Nộp bài & Yêu cầu Review",exact:true}).click();
+        await page.getByText("Cấu trúc dữ liệu phản hồi không hợp lệ.",{exact:true}).waitFor();
+        assert.equal(await content.inputValue(),"Bằng chứng cần được giữ lại khi phản hồi server không hợp lệ.");
+        await page.getByRole("button",{name:"Nộp bài & Yêu cầu Review",exact:true}).click();
+        await page.waitForFunction(()=> (document.querySelector("#submission-content") as HTMLTextAreaElement)?.value === "");
+        assert.equal(submissionKeys.length,2); assert.equal(submissionKeys[0],submissionKeys[1]);
+        let aiState={mode:"inherit",model:"test-model",hasKey:false,canSave:true,lastCheck:null};
+        const testKey="sk-fixture-only-not-an-actual-key";
+        await page.route("**/api/ai/settings",async route=>{
+            if(route.request().method()==="PUT"){const input=route.request().postDataJSON();assert.equal(input.apiKey,testKey);assert.equal(input.mode,"mock");aiState={...aiState,hasKey:true,mode:input.mode,model:input.model};}
+            await route.fulfill({json:{data:aiState}});
+        });
+        await page.route("**/api/ai/settings/check",async route=>{
+            const input=route.request().postDataJSON();assert.equal(input.apiKey,undefined);
+            const agents=input.test==="agents"?["planner","coordinator","reviewer","weekly_report"].map(agent=>({agent,ok:true,code:"CONNECTED",message:"Phản hồi kiểm tra đạt."})):[];
+            await route.fulfill({json:{data:{checkedAt:new Date().toISOString(),test:input.test,ok:true,code:"TEST_OK",message:input.test==="key"?"Khóa kiểm tra được chấp nhận.":"Bốn trợ lý kiểm tra đạt.",modelAvailable:true,models:["test-model"],agents}}});
+        });
+        await page.goto(`http://127.0.0.1:${a.port}/?screen=settings`);
+        await page.getByLabel("OpenAI API key",{exact:true}).fill(testKey);
+        await page.getByLabel("Chế độ AI",{exact:true}).selectOption("mock");
+        await page.getByRole("button",{name:"Lưu cấu hình",exact:true}).click();
+        await page.getByText("Đã lưu cấu hình AI cho tài khoản của bạn. Khóa được mã hóa ở máy chủ.",{exact:true}).waitFor();
+        assert.equal(await page.getByLabel("OpenAI API key",{exact:true}).inputValue(),"");
+        await page.getByRole("button",{name:"Kiểm tra khóa và model",exact:true}).click();await page.getByText("Khóa kiểm tra được chấp nhận.",{exact:true}).waitFor();
+        await page.getByRole("button",{name:"Chạy thử 4 trợ lý · Có thể tính phí",exact:true}).click();await page.getByText("Bốn trợ lý kiểm tra đạt.",{exact:true}).waitFor();
+        assert.equal(await page.getByText("Phản hồi kiểm tra đạt.",{exact:true}).count(),4);
+        assert.equal(await page.evaluate(()=>localStorage.length),0);
+        assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+        await page.screenshot({path:".cache/planning-ui/ai-settings-mobile.png",fullPage:true});
+        console.log("Planning/delivery/settings browser: guided wizard, publish, 360px, error retention, submission retry, masked key save, key/model check and 4 agent statuses passed (fixture API; no real OpenAI call).");
     }
     finally {
         await browser.close();

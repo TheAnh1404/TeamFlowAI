@@ -1,5 +1,7 @@
 # Bản ghép thử TV1 + TV2 + TV3
 
+> Đang nâng cấp backend theo [BACKEND_UPGRADE](BACKEND_UPGRADE.md). Delivery runtime đã thay bộ nhớ tạm bằng DB chung; phần giới hạn phía dưới ghi lại trạng thái tại phiên ghép ban đầu. Cấu hình Neon thật vẫn chưa có để kiểm chứng bên ngoài.
+
 Nhánh cục bộ: `codex/integration-tv1-tv2-tv3`.
 
 Nguồn đã ghép: `origin/main` và `origin/tv2_hung` (5d6f9ee), `origin/tv1_hung` (76a5106), `origin/tv3-quang` (466594b). Git merge không xung đột. Main và các nhánh thành viên không bị sửa.

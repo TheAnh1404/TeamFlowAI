@@ -4,6 +4,10 @@ import React, { useState } from "react";
 import type { SubmissionContentType } from "@/contracts/enums";
 import type { Task } from "@/contracts/task";
 import type { SubmitWorkResult } from "@/contracts/submission";
+import { submissionSchema, taskSchema } from "@/contracts";
+import { z } from "zod";
+import { apiFetch } from "@/lib/api-client";
+import { useMutationKey } from "./use-mutation-key";
 
 interface SubmissionFormProps {
   task: Task;
@@ -17,6 +21,7 @@ export function SubmissionForm({ task, onSubmitted, disabled = false, onDirtyCha
   const [content, setContent] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const mutationKey = useMutationKey();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -25,10 +30,10 @@ export function SubmissionForm({ task, onSubmitted, disabled = false, onDirtyCha
     setIsSubmitting(true);
     setError(null);
 
-    const idempotencyKey = `submit_${task.id}_${task.version}_${Date.now()}`;
+    const idempotencyKey = mutationKey({taskId: task.id, version: task.version, contentType, content});
 
     try {
-      const res = await fetch(`/api/tasks/${encodeURIComponent(task.id)}/submissions`, {
+      const result = await apiFetch(`/api/tasks/${encodeURIComponent(task.id)}/submissions`, z.object({submission: submissionSchema, task: taskSchema}), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -41,14 +46,9 @@ export function SubmissionForm({ task, onSubmitted, disabled = false, onDirtyCha
         }),
       });
 
-      const body = await res.json();
-      if (!res.ok) {
-        throw new Error(body.error?.message || "Nộp bài thất bại.");
-      }
-
       setContent("");
       onDirtyChange?.(false);
-      onSubmitted(body.data);
+      onSubmitted(result.data);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Đã xảy ra lỗi khi nộp bài.");
     } finally {
@@ -114,6 +114,7 @@ export function SubmissionForm({ task, onSubmitted, disabled = false, onDirtyCha
         </label>
         <textarea
           id="submission-content"
+          maxLength={24000}
           rows={6}
           value={content}
           onChange={(e) => {

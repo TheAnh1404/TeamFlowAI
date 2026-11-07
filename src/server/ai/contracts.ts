@@ -12,6 +12,9 @@ export interface PlanningTaskProposal {
   deadline: string;
   criteria: string[];
   dependencyTempKeys: string[];
+  steps?: string[];
+  assignmentReason?: string;
+  estimatedHours?: number;
 }
 export interface PlanningAiProposal { tasks: PlanningTaskProposal[] }
 

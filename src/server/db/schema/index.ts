@@ -101,3 +101,24 @@ export const mutationResults = pgTable("mutation_results", {
   scope: text().primaryKey(), userId: text().notNull().references(() => users.id),
   fingerprint: text().notNull(), result: jsonb().$type<unknown>().notNull(), createdAt: instant().notNull(),
 });
+
+// Read-only mentor grants are separate from task membership and acceptance rights.
+export const projectMentors = pgTable("project_mentors", {
+  id: text().primaryKey(), projectId: text().notNull().references(() => projects.id),
+  userId: text().notNull().references(() => users.id), grantedByMemberId: text().notNull(),
+  createdAt: instant().notNull(),
+}, t => [unique().on(t.projectId, t.userId), foreignKey({columns:[t.grantedByMemberId,t.projectId],foreignColumns:[projectMembers.id,projectMembers.projectId]})]);
+
+export const notifications = pgTable("notifications", {
+  id: text().primaryKey(), projectId: text().notNull().references(() => projects.id),
+  recipientUserId: text().notNull().references(() => users.id),
+  kind: text({enum:["deadline_risk"]}).notNull(), title: text().notNull(), message: text().notNull(),
+  snapshot: jsonb().$type<{asOf:string; deadline:string; accepted:number; total:number; progressPercent:number; elapsedPercent:number}>().notNull(),
+  createdAt: instant().notNull(), readAt: instant(), resolvedAt: instant(),
+}, t => [unique().on(t.projectId,t.recipientUserId,t.kind),index("notifications_recipient_created").on(t.recipientUserId,t.createdAt)]);
+
+export const userAiSettings=pgTable("user_ai_settings",{
+  userId:text().primaryKey().references(()=>users.id),
+  encryptedApiKey:text(),model:text().notNull(),mode:text({enum:["inherit","mock","real"]}).notNull(),
+  lastCheck:jsonb().$type<import("@/features/ai-settings/contracts").ConnectionCheck>(),updatedAt:instant().notNull(),
+});

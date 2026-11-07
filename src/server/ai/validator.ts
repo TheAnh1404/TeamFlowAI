@@ -13,6 +13,9 @@ const planningProposalSchema = z.object({
     deadline: z.string().min(1),
     criteria: z.array(z.string().min(1)).min(1),
     dependencyTempKeys: z.array(z.string()),
+    steps: z.array(z.string().trim().min(1).max(1000)).min(1).max(10).optional(),
+    assignmentReason: z.string().trim().min(1).max(1500).optional(),
+    estimatedHours: z.number().positive().max(168).optional(),
   })),
 });
 
@@ -87,7 +90,7 @@ export function validateReviewerProposal(raw: unknown, submission: Submission): 
 
     // Bất biến: quote phải là substring có thật trong submission.content
     for (const ev of r.evidence) {
-      if (ev.quote && !submission.content.includes(ev.quote)) {
+      if (ev.submissionId !== submission.id || !ev.quote.trim() || !submission.content.includes(ev.quote)) {
         throw new AiInvalidOutputError(
           `Bằng chứng trích dẫn không tồn tại trong bài nộp (Hallucination detection): "${ev.quote.slice(0, 50)}..."`
         );

@@ -4,6 +4,7 @@ import { aiProvider } from "@/server/ai";
 import type { AiProvider, TrackingAiInput, TrackingAiProposal, AiResult } from "@/server/ai/contracts";
 import { HttpError } from "@/server/http/errors";
 import { FeatureNotImplementedError } from "@/server/http/feature-not-implemented-error";
+import {currentAiOverride} from "@/server/ai/context";
 
 const proposalSchema = z.object({
   intent: z.enum(["update", "discussion", "clarify"]), taskId: z.string().min(1).optional(),
@@ -13,7 +14,7 @@ const proposalSchema = z.object({
 export type Coordinator = (input: TrackingAiInput) => Promise<AiResult<TrackingAiProposal>>;
 export function createCoordinator(provider: AiProvider = aiProvider, timeoutMs = 20000): Coordinator {
   return async (input) => {
-    if (process.env.TRACKING_AI_MODE === "mock") return { proposal: mockProposal(input), aiMode: "mock" };
+    if ((currentAiOverride()?.mode??process.env.TRACKING_AI_MODE) === "mock") return { proposal: mockProposal(input), aiMode: "mock" };
     let timer: ReturnType<typeof setTimeout> | undefined;
     try {
       const result = await Promise.race([

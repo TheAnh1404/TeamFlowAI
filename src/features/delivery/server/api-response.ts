@@ -33,7 +33,7 @@ export function handleDeliveryApiError(err: unknown): Response {
     );
   }
 
-  const message = err instanceof Error ? err.message : "Đã xảy ra lỗi máy chủ.";
+  const message = "Không thể xử lý yêu cầu. Hãy thử lại hoặc kiểm tra cấu hình máy chủ.";
   return Response.json(
     { error: { code: "INTERNAL_ERROR", message } },
     { status: 500 },

@@ -4,6 +4,10 @@ import React, { useState } from "react";
 import type { Review } from "@/contracts/review";
 import type { Submission } from "@/contracts/submission";
 import type { Task } from "@/contracts/task";
+import { reviewSchema, taskSchema } from "@/contracts";
+import { z } from "zod";
+import { apiFetch } from "@/lib/api-client";
+import { useMutationKey } from "./use-mutation-key";
 
 interface ReviewPanelProps {
   task?: Task;
@@ -21,15 +25,16 @@ export function ReviewPanel({
 }: ReviewPanelProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const mutationKey = useMutationKey();
 
   async function handleRequestReview() {
     setIsLoading(true);
     setError(null);
 
-    const idempotencyKey = `review_${submission.id}_${Date.now()}`;
+    const idempotencyKey = mutationKey({submissionId: submission.id});
 
     try {
-      const res = await fetch(`/api/submissions/${encodeURIComponent(submission.id)}/review`, {
+      const result = await apiFetch(`/api/submissions/${encodeURIComponent(submission.id)}/review`, z.object({review: reviewSchema, task: taskSchema}), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -37,12 +42,7 @@ export function ReviewPanel({
         },
       });
 
-      const body = await res.json();
-      if (!res.ok) {
-        throw new Error(body.error?.message || "Không thể yêu cầu đánh giá từ Reviewer AI.");
-      }
-
-      onReviewUpdated(body.data.review, body.data.task);
+      onReviewUpdated(result.data.review, result.data.task);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Đã xảy ra lỗi khi gọi Reviewer AI.");
     } finally {
