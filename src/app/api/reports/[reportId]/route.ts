@@ -1,4 +1,17 @@
-import { notImplementedResponse } from "@/server/http/not-implemented";
+import { handleDeliveryApiError } from "@/features/delivery/server/api-response";
+import { getDeliverySession } from "@/features/delivery/server/auth-helper";
+import { deliveryService } from "@/features/delivery/server/service";
 
-// TODO(TV3): implement only in the assigned feature session; no DB/auth/AI here.
-export const GET = notImplementedResponse;
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ reportId: string }> },
+): Promise<Response> {
+  try {
+    const { reportId } = await params;
+    const session = await getDeliverySession(request);
+    const report = await deliveryService.getReport(session, reportId);
+    return Response.json({ data: report });
+  } catch (err) {
+    return handleDeliveryApiError(err);
+  }
+}
