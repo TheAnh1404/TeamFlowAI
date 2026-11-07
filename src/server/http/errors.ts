@@ -20,7 +20,11 @@ export async function endpoint(action: () => Promise<unknown>): Promise<Response
   }
 }
 export function assertSameOrigin(request: Request) {
-  assert(request.headers.get("origin") === new URL(request.url).origin, 403, "FORBIDDEN", "Yêu cầu phải được gửi từ ứng dụng này.");
+  // Next may normalize request.url to localhost while the browser uses 127.0.0.1.
+  // Host is the HTTP destination selected by the browser; do not trust forwarded-host.
+  const url = new URL(request.url);
+  const expectedOrigin = `${url.protocol}//${request.headers.get("host") ?? url.host}`;
+  assert(request.headers.get("origin") === expectedOrigin, 403, "FORBIDDEN", "Yêu cầu phải được gửi từ ứng dụng này.");
 }
 export async function readJson<T>(request: Request, schema: ZodType<T>): Promise<T> {
   assertSameOrigin(request);

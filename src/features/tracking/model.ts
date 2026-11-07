@@ -13,5 +13,5 @@ export const statusLabels = {
   in_review: "Chờ nghiệm thu", changes_requested: "Cần chỉnh sửa", done: "Đã hoàn thành",
 } as const;
 export function formatTime(value: string, timeZone: string) {
-  return new Intl.DateTimeFormat("vi-VN", { dateStyle: "short", timeStyle: "short", timeZone }).format(new Date(value));
+  return new Intl.DateTimeFormat("vi-VN", { day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit",timeZone }).format(new Date(value));
 }

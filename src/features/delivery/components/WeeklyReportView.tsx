@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { SourceRef, WeeklyReport } from "@/contracts/report";
-import { loadContext, requestKey } from "@/features/tracking/components/client-data";
+import { loadContext } from "@/features/tracking/components/client-data";
 import { routes } from "@/lib/routes";
 import { formatIsoDate } from "@/lib/utils";
 import { ReportSourcesDrawer } from "./ReportSourcesDrawer";
@@ -14,7 +14,6 @@ interface WeeklyReportViewProps {
 }
 
 export function WeeklyReportView({ projectId }: WeeklyReportViewProps) {
-  const retry = useRef<{ input: string; key: string } | null>(null);
   const snapshotEnd = useRef(new Date().toISOString());
   const [canGenerate, setCanGenerate] = useState(false);
   const [reports, setReports] = useState<WeeklyReport[]>([]);

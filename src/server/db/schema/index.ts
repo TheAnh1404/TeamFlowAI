@@ -193,8 +193,16 @@ export const checkinRevisions = pgTable("daily_checkin_revisions", {
 }, t => [unique().on(t.checkinId, t.revision), index("checkin_revisions_snapshot_idx").on(t.projectId, t.workDate, t.submittedAt)]);
 export const notifications = pgTable("notifications", {
   id: text().primaryKey(), recipientUserId: text().notNull().references(() => users.id), projectId: text().notNull().references(() => projects.id),
-  dedupeKey: text().notNull(), type: text().notNull(), text: text().notNull(), target: text().notNull(), createdAt: instant().notNull(), readAt: instant(),
-}, t => [unique().on(t.recipientUserId, t.dedupeKey), index("notifications_user_cursor_idx").on(t.recipientUserId, t.createdAt, t.id)]);
+  dedupeKey: text(), type: text(), text: text(), target: text(),
+  kind: text({ enum: ["deadline_risk"] }), title: text(), message: text(),
+  snapshot: jsonb().$type<{ asOf: string; deadline: string; accepted: number; total: number; progressPercent: number; elapsedPercent: number }>(),
+  createdAt: instant().notNull(), readAt: instant(), resolvedAt: instant(),
+}, t => [
+  unique().on(t.recipientUserId, t.dedupeKey),
+  unique().on(t.projectId, t.recipientUserId, t.kind),
+  index("notifications_user_cursor_idx").on(t.recipientUserId, t.createdAt, t.id),
+  index("notifications_recipient_created").on(t.recipientUserId, t.createdAt),
+]);
 export const automationJobs = pgTable("automation_jobs", {
   id: text().primaryKey(), type: text().notNull(), projectId: text().references(() => projects.id),
   dedupeKey: text().notNull().unique(), payload: jsonb().$type<Record<string, unknown>>().notNull(),
@@ -227,3 +235,16 @@ export const emailVerificationTokens = pgTable("email_verification_tokens", {
   id: text().primaryKey(), userId: text().notNull().references(() => users.id), email: text().notNull(),
   tokenHash: text().notNull().unique(), expiresAt: instant().notNull(), consumedAt: instant(), createdAt: instant().notNull(),
 }, t => [index("email_verification_user_idx").on(t.userId,t.createdAt)]);
+
+// Read-only mentor grants are separate from task membership and acceptance rights.
+export const projectMentors = pgTable("project_mentors", {
+  id: text().primaryKey(), projectId: text().notNull().references(() => projects.id),
+  userId: text().notNull().references(() => users.id), grantedByMemberId: text().notNull(),
+  createdAt: instant().notNull(),
+}, t => [unique().on(t.projectId, t.userId), foreignKey({columns:[t.grantedByMemberId,t.projectId],foreignColumns:[projectMembers.id,projectMembers.projectId]})]);
+
+export const userAiSettings = pgTable("user_ai_settings", {
+  userId: text().primaryKey().references(() => users.id),
+  encryptedApiKey: text(), model: text().notNull(), mode: text({ enum: ["inherit", "mock", "real"] }).notNull(),
+  lastCheck: jsonb().$type<import("@/features/ai-settings/contracts").ConnectionCheck>(), updatedAt: instant().notNull(),
+});

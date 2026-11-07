@@ -13,10 +13,14 @@ import {
   validateReviewerProposal,
   validateTrackingProposal,
 } from "./validator";
+import { currentAiOverride } from "./context";
 
 const TIMEOUT_MS = 25000;
 
 function getApiKey(): { provider: "gemini" | "openai"; key: string; model: string } | null {
+  const override = currentAiOverride();
+  if (override) return override.mode === "real" && override.apiKey ? { provider: "openai", key: override.apiKey, model: override.model ?? "gpt-4o-mini" } : null;
+
   const geminiKey = process.env.GEMINI_API_KEY?.trim();
   if (geminiKey) {
     return {
@@ -39,6 +43,7 @@ function getApiKey(): { provider: "gemini" | "openai"; key: string; model: strin
 }
 
 export function isRealAiConfigured(): boolean {
+  if (currentAiOverride()) return getApiKey() !== null;
   return getApiKey() !== null && process.env.AI_FORCE_MOCK !== "true" && process.env.AI_MODE !== "mock";
 }
 
@@ -117,6 +122,8 @@ async function callOpenAi(
     body: JSON.stringify({
       model,
       temperature: 0.2,
+      store: false,
+      ...(currentAiOverride()?.maxOutputTokens ? { max_completion_tokens: currentAiOverride()!.maxOutputTokens } : {}),
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: systemPrompt },

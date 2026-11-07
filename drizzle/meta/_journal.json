@@ -50,6 +50,13 @@
       "when": 1794024000000,
       "tag": "0006_email_verification",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794025000000,
+      "tag": "0007_supervision_and_ai_settings",
+      "breakpoints": true
     }
   ]
 }

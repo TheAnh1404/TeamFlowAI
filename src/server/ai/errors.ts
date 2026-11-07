@@ -26,7 +26,7 @@ export class AiInvalidOutputError extends AiError {
 }
 
 export class AiUnavailableError extends AiError {
-  constructor(message = "Dịch vụ AI hiện không khả dụng. Vui lòng thử lại sau.", cause?: unknown) {
+  constructor(message = "Dịch vụ AI hiện không khả dụng. Vui lòng thử lại sau.", cause?: unknown, public readonly upstreamStatus?:number) {
     super("AI_UNAVAILABLE", message, cause);
   }
 }

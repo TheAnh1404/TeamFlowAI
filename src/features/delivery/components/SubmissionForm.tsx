@@ -20,10 +20,6 @@ export function SubmissionForm({ task, onSubmitted, disabled = false, onDirtyCha
   const [error, setError] = useState<string | null>(null);
   const retry = useRef<{ input: string; key: string } | null>(null);
 
-  // Idempotency key thuần túy chuẩn React 19: giữ cố định khi retry, tự đổi khi task đổi version hoặc nộp thành công
-  const [submitSeq, setSubmitSeq] = useState(1);
-  const idempotencyKey = `sub_${task.id}_v${task.version}_seq_${submitSeq}`;
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!content.trim() || isSubmitting) return;
@@ -80,8 +76,6 @@ export function SubmissionForm({ task, onSubmitted, disabled = false, onDirtyCha
       setContent("");
       retry.current = null;
       onDirtyChange?.(false);
-      // Đổi key mới cho lần nộp tiếp theo
-      setSubmitSeq((seq) => seq + 1);
       onSubmitted(body.data);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Đã xảy ra lỗi khi nộp bài.");

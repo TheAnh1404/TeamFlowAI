@@ -1,0 +1,10 @@
+import {z} from "zod";
+export const modelSchema=z.string().trim().min(1).max(120).regex(/^[A-Za-z0-9_.:/-]+$/,"Model ID không hợp lệ.");
+export const apiKeySchema=z.string().trim().min(20,"Khóa quá ngắn.").max(1024).regex(/^\S+$/,"Khóa không được có khoảng trắng.");
+export const saveAiSettingsSchema=z.object({model:modelSchema,mode:z.enum(["inherit","mock","real"]),apiKey:apiKeySchema.optional()}).strict();
+export const checkAiSettingsSchema=z.object({model:modelSchema,apiKey:apiKeySchema.optional(),test:z.enum(["key","agents"])}).strict();
+export const agentCheckSchema=z.object({agent:z.enum(["planner","coordinator","reviewer","weekly_report"]),ok:z.boolean(),code:z.string(),message:z.string()});
+export const connectionCheckSchema=z.object({checkedAt:z.string(),test:z.enum(["key","agents"]),ok:z.boolean(),code:z.string(),message:z.string(),modelAvailable:z.boolean().nullable(),models:z.array(z.string()),agents:z.array(agentCheckSchema)});
+export type ConnectionCheck=z.infer<typeof connectionCheckSchema>;
+export const aiSettingsStatusSchema=z.object({mode:z.enum(["inherit","mock","real"]),model:z.string(),hasKey:z.boolean(),canSave:z.boolean(),lastCheck:connectionCheckSchema.nullable()});
+export type AiSettingsStatus=z.infer<typeof aiSettingsStatusSchema>;

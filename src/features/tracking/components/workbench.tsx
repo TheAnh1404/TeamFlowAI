@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, useTransition, type ReactNode, type KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { Task } from "@/contracts";
@@ -7,6 +7,7 @@ import { routes } from "@/lib/routes";
 import { statusLabels, type WorkspaceData } from "../model";
 import { StatusBadge, TaskDetailPanel, formatTime } from "./task-detail";
 import { ChatPanel } from "./chat-panel";
+import { ProjectTimeline } from "./project-timeline";
 import styles from "./tracking.module.css";
 
 export interface DeliverySlotProps {
@@ -23,10 +24,12 @@ const subscribeToDesktop = (changed: () => void) => {
 };
 export function TrackingWorkbench({ data, screen, taskId, renderDelivery }: WorkbenchProps) {
   const router = useRouter();
+  const [refreshing,startRefresh]=useTransition();
   const desktop = useSyncExternalStore(subscribeToDesktop, () => window.matchMedia("(min-width: 768px)").matches, () => false);
   const [search, setSearch] = useState(""); const [status, setStatus] = useState(""); const [owner, setOwner] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null); const dialog = useRef<HTMLDialogElement>(null);
   const [isDirty, setDirty] = useState(false); const opener = useRef<HTMLElement | null>(null);
+  const [hasMutated, setHasMutated] = useState(false);
   const selected = data.tasks.find((t) => t.id === (screen === "task" ? taskId : selectedId));
   useEffect(() => {
     if ((selectedId || (screen === "task" && desktop)) && dialog.current && !dialog.current.open) {
@@ -41,10 +44,18 @@ export function TrackingWorkbench({ data, screen, taskId, renderDelivery }: Work
     else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
   }
   function close() {
+    if(refreshing)return;
     if (isDirty && !window.confirm("Bài nộp đang soạn chưa được lưu. Bạn muốn đóng và bỏ nội dung đang soạn?")) return;
     setDirty(false); dialog.current?.close(); setSelectedId(null);
-    if (screen === "task") { router.push(routes.tasks(data.project.id)); return; }
-    window.history.replaceState(null, "", screen === "chat" ? routes.chat(data.project.id) : routes.tasks(data.project.id));
+    const destination = screen === "chat" ? routes.chat(data.project.id) : routes.tasks(data.project.id);
+    // A saved mutation may have refreshed the task URL behind the drawer.
+    // Finish that navigation with a fresh document, cancelling any late RSC
+    // stream, and return keyboard focus to the task's row via its fragment.
+    if (hasMutated || screen === "task") {
+      window.location.assign(destination + (screen !== "chat" && selected ? `#task-${selected.id}` : ""));
+      return;
+    }
+    router.push(destination);
     opener.current?.focus();
   }
   function open(task: Task, origin: HTMLElement) {
@@ -54,9 +65,10 @@ export function TrackingWorkbench({ data, screen, taskId, renderDelivery }: Work
   }
   const filtered = data.tasks.filter((t) => t.title.toLocaleLowerCase("vi").includes(search.toLocaleLowerCase("vi")) && (!status || t.status === status) && (!owner || t.assigneeMemberId === owner));
   const overdue = (t: Task) => t.status !== "done" && Date.parse(t.deadline) < Date.parse(data.asOf);
-  const detail = selected && <TaskDetailPanel task={selected} data={data} deliverySlot={renderDelivery?.({ task: selected, currentMember: data.actor, onTaskChange: () => router.refresh(), onDirtyChange: setDirty })} />;
+  const detail = selected && <TaskDetailPanel task={selected} data={data} deliverySlot={renderDelivery?.({ task: selected, currentMember: data.actor, onTaskChange: () => { setHasMutated(true); startRefresh(()=>router.refresh()); }, onDirtyChange: setDirty })} />;
   return <>
     {(screen === "board" || (screen === "task" && desktop)) && <>
+      <ProjectTimeline data={data} />
       <div className={styles.metrics} aria-label="Tóm tắt công việc">{[
         ["Đã hoàn thành", `${data.tasks.filter((t) => t.status === "done").length} / ${data.tasks.length}`],
         ["Bị chặn", data.tasks.filter((t) => t.status === "blocked").length],
@@ -75,7 +87,7 @@ export function TrackingWorkbench({ data, screen, taskId, renderDelivery }: Work
         {filtered.length === 0 ? <div className={styles.empty}>Không có công việc khớp bộ lọc.</div> : <table className={styles.table}><thead><tr><th>Công việc</th><th>Người phụ trách</th><th>Trạng thái</th><th>Hạn chót</th><th>Trở ngại / Phụ thuộc</th><th>Cập nhật gần nhất</th></tr></thead><tbody>{filtered.map((task) => {
           const latest = data.updates.filter((u) => u.taskId === task.id).at(-1);
           return <tr key={task.id} className={styles.row} onClick={(e) => { const link = e.currentTarget.querySelector("a"); if (link && !(e.target as HTMLElement).closest("a")) open(task, link); }}>
-            <td><Link href={routes.task(data.project.id, task.id)} onClick={(e) => { if (!e.ctrlKey && !e.metaKey && !e.shiftKey) { e.preventDefault(); open(task, e.currentTarget); } }}>{task.title}</Link><br /><small className={styles.muted}>{task.id}</small></td>
+            <td><Link id={`task-${task.id}`} href={routes.task(data.project.id, task.id)} onClick={(e) => { if (!e.ctrlKey && !e.metaKey && !e.shiftKey) { e.preventDefault(); open(task, e.currentTarget); } }}>{task.title}</Link><br /><small className={styles.muted}>{task.id}</small></td>
             <td>{data.members.find((m) => m.member.id === task.assigneeMemberId)?.user.displayName ?? "Thành viên"}</td>
             <td><StatusBadge status={task.status} /></td><td>{formatTime(task.deadline, data.project.timeZone)}{overdue(task) && <><br /><span className={`${styles.badge} ${styles.overdue}`}>Quá hạn</span></>}</td>
             <td>{task.status === "blocked" ? latest?.blocker ?? "Chưa có mô tả" : task.dependencyTaskIds.length ? `${task.dependencyTaskIds.length} phụ thuộc` : "—"}</td>
@@ -87,7 +99,7 @@ export function TrackingWorkbench({ data, screen, taskId, renderDelivery }: Work
     {screen === "chat" && <ChatPanel data={data} onOpenTask={open} />}
     {screen === "task" && !desktop && <div className={styles.taskPage}><Link href={routes.tasks(data.project.id)} onClick={(e) => { if (isDirty && !window.confirm("Bỏ nội dung bài nộp đang soạn?")) e.preventDefault(); }}>← Quay lại danh sách</Link>{detail ?? <p role="alert">Không tìm thấy công việc trong dự án này.</p>}</div>}
     {(screen !== "task" || desktop) && <dialog ref={dialog} className={styles.dialog} aria-labelledby="task-detail-title" onKeyDown={trapFocus} onCancel={(e) => { e.preventDefault(); close(); }}>
-      <button type="button" onClick={close} aria-label="Đóng chi tiết công việc">Đóng ×</button>{detail}
+      <button type="button" disabled={refreshing} onClick={close} aria-label="Đóng chi tiết công việc">Đóng ×</button>{refreshing&&<p role="status">Đang đồng bộ dữ liệu công việc…</p>}{detail}
     </dialog>}
   </>;
 }

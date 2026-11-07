@@ -8,7 +8,7 @@ import type { Session } from "./contracts";
 
 export const SESSION_COOKIE = "teamflow_session";
 export const SESSION_DURATION_MS = 8 * 60 * 60 * 1000; // 8 hours fixed per plan
-export const DEMO_ACCOUNTS = { TV1: "demo-tv1", TV2: "demo-tv2", TV3: "demo-tv3" } as const;
+export const DEMO_ACCOUNTS = { TV1: "demo-tv1", TV2: "demo-tv2", TV3: "demo-tv3", MENTOR: "demo-mentor" } as const;
 
 export function hashSessionToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");

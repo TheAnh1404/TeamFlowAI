@@ -11,6 +11,8 @@ import { createPlanningService } from "../src/features/planning/server/implement
 import { createPlanner } from "../src/features/planning/server/planner";
 import { HttpError } from "../src/server/http/errors";
 import { eq } from "drizzle-orm";
+import { aiProvider } from "../src/server/ai";
+import { createTrackingService } from "../src/features/tracking/server/implementation";
 const pg = new PGlite(), db = drizzle(pg, { schema }) as unknown as Database;
 let leader: Session, member: Session;
 const service = createPlanningService(db, createPlanner(undefined, "mock"));
@@ -26,11 +28,28 @@ before(async () => {
     member = { user: users.find(u => u.id === "demo-tv2")!, memberships: [] };
 });
 after(async () => { await pg.close(); });
+test("shared TV3 Planner publishes tasks read by the TV2 workspace", async () => {
+    const previousKey = process.env.OPENAI_API_KEY;
+    delete process.env.OPENAI_API_KEY;
+    try {
+        const project = await setup();
+        const integrated = createPlanningService(db, createPlanner(aiProvider, ""));
+        const plan = await integrated.generatePlanDraft(leader, project.id);
+        assert.equal(plan.aiMode, "mock");
+        const published = await integrated.publishPlan(leader, plan.id, {expectedVersion:plan.version,approved:true}, {idempotencyKey:crypto.randomUUID()});
+        const visible = await createTrackingService(db).listTasks(member, project.id);
+        assert.deepEqual(visible.map(t=>t.id).sort(), published.tasks.map(t=>t.id).sort());
+        assert(visible.every(t=>t.status === "todo"));
+    } finally {
+        if (previousKey === undefined) delete process.env.OPENAI_API_KEY;
+        else process.env.OPENAI_API_KEY = previousKey;
+    }
+});
 async function setup() { const { project, member: m } = await service.createProject(leader, input); await service.updateProjectMember(leader, project.id, m.id, { skills: ["UI"], availableHoursPerWeek: 10 }); await service.addProjectMember(leader, project.id, { userId: member.user.id, skills: ["API"], availableHoursPerWeek: 10, canAccept: false }); return project; }
 test("draft remains private; versioned edits preserve IDs; publish is atomic, approved and retry-safe", async () => {
     const p = await setup(), plan = await service.generatePlanDraft(leader, p.id);
     assert.equal(plan.aiMode, "mock");
-    assert.equal((await db.select().from(schema.tasks)).length, 0);
+    assert.equal((await db.select().from(schema.tasks).where(eq(schema.tasks.projectId, p.id))).length, 0);
     await assert.rejects(service.getPlan(member, p.id), code("FORBIDDEN"));
     await assert.rejects(service.publishPlan(member, plan.id, { expectedVersion: 1, approved: true }, { idempotencyKey: "publish-key" }), code("FORBIDDEN"));
     await assert.rejects(service.publishPlan(leader, plan.id, { expectedVersion: 1, approved: false }, { idempotencyKey: "publish-key" }), code("VALIDATION_ERROR"));
@@ -41,7 +60,7 @@ test("draft remains private; versioned edits preserve IDs; publish is atomic, ap
     const request = { expectedVersion: edited.version, approved: true }, options = { idempotencyKey: "publish-key" };
     const published = await service.publishPlan(leader, plan.id, request, options);
     assert.deepEqual(await service.publishPlan(leader, plan.id, request, options), published);
-    assert.equal((await db.select().from(schema.tasks).where(eq(schema.tasks.projectId, p.id))).length, 2);
+    assert.equal((await db.select().from(schema.tasks).where(eq(schema.tasks.projectId, p.id))).length, plan.draftTasks.length);
     await assert.rejects(service.publishPlan(leader, plan.id, request, { idempotencyKey: "another-key" }), code("INVALID_TRANSITION"));
     await assert.rejects(service.updatePlanDraft(leader, plan.id, { expectedVersion: published.plan.version, draftTasks: plan.draftTasks }), code("INVALID_TRANSITION"));
     assert.equal((await service.getPlan(member, p.id))?.status, "published");
@@ -49,7 +68,7 @@ test("draft remains private; versioned edits preserve IDs; publish is atomic, ap
 test("rejects cycles, foreign IDs, invalid members/deadlines and freezes project inputs", async () => {
     const p = await setup(), plan = await service.generatePlanDraft(leader, p.id), a = plan.draftTasks;
     const edit = (draftTasks: typeof a) => service.updatePlanDraft(leader, plan.id, { expectedVersion: 1, draftTasks });
-    await assert.rejects(edit(a.map((t, i) => ({ ...t, dependencyTaskIds: [a[1 - i].id] }))), code("VALIDATION_ERROR"));
+    await assert.rejects(edit(a.map((t, i) => ({ ...t, dependencyTaskIds: [a[(i+1)%a.length].id] }))), code("VALIDATION_ERROR"));
     await assert.rejects(edit(a.map(t => ({ ...t, assigneeMemberId: "foreign" }))), code("VALIDATION_ERROR"));
     await assert.rejects(edit(a.map(t => ({ ...t, deadline: "2099-01-01T00:00:00Z" }))), code("VALIDATION_ERROR"));
     await assert.rejects(edit(a.map(t => ({ ...t, id: "foreign" }))), code("VALIDATION_ERROR"));

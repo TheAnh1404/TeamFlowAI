@@ -53,7 +53,7 @@ const key = () => ({ idempotencyKey: crypto.randomUUID() });
 function codeIs(code: string) { return (e: unknown) => e instanceof HttpError && e.code === code; }
 
 test("migration + seed are usable; roles are read from DB, not cached/client membership", async () => {
-  assert.equal((await db.select().from(schema.users)).length, 3);
+  assert.equal((await db.select().from(schema.users)).length, 4);
   const auth = createAuthorizationProvider(db);
   assert.equal((await auth.assertProjectMember(assignee, "p1")).id, "m2");
   await assert.rejects(auth.assertPlanPublishAllowed(assignee, "plan1"), codeIs("FORBIDDEN"));
