@@ -1,13 +1,15 @@
 "use client";
-import { useEffect, useRef, useState, useSyncExternalStore, useTransition, type ReactNode, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, useTransition, type KeyboardEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { Task } from "@/contracts";
 import { routes } from "@/lib/routes";
+import { DeliverySlot } from "@/features/delivery";
 import { statusLabels, type WorkspaceData } from "../model";
 import { StatusBadge, TaskDetailPanel, formatTime } from "./task-detail";
 import { ChatPanel } from "./chat-panel";
 import { ProjectTimeline } from "./project-timeline";
+import { MemberManager } from "./member-manager";
 import styles from "./tracking.module.css";
 
 export interface DeliverySlotProps {
@@ -65,10 +67,11 @@ export function TrackingWorkbench({ data, screen, taskId, renderDelivery }: Work
   }
   const filtered = data.tasks.filter((t) => t.title.toLocaleLowerCase("vi").includes(search.toLocaleLowerCase("vi")) && (!status || t.status === status) && (!owner || t.assigneeMemberId === owner));
   const overdue = (t: Task) => t.status !== "done" && Date.parse(t.deadline) < Date.parse(data.asOf);
-  const detail = selected && <TaskDetailPanel task={selected} data={data} deliverySlot={renderDelivery?.({ task: selected, currentMember: data.actor, onTaskChange: () => { setHasMutated(true); startRefresh(()=>router.refresh()); }, onDirtyChange: setDirty })} />;
+  const detail = selected && <TaskDetailPanel task={selected} data={data} deliverySlot={renderDelivery?.({ task: selected, currentMember: data.actor, onTaskChange: () => { setHasMutated(true); startRefresh(() => router.refresh()); }, onDirtyChange: setDirty }) ?? <DeliverySlot task={selected} currentMember={data.actor} onTaskChange={() => router.refresh()} onDirtyChange={setDirty} />} />;
   return <>
     {(screen === "board" || (screen === "task" && desktop)) && <>
       <ProjectTimeline data={data} />
+      {screen === "board" && <MemberManager data={data} onChanged={() => router.refresh()} />}
       <div className={styles.metrics} aria-label="Tóm tắt công việc">{[
         ["Đã hoàn thành", `${data.tasks.filter((t) => t.status === "done").length} / ${data.tasks.length}`],
         ["Bị chặn", data.tasks.filter((t) => t.status === "blocked").length],

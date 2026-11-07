@@ -38,18 +38,6 @@ export function WeeklyReportView({ projectId }: WeeklyReportViewProps) {
     async function loadReports() {
       setIsLoading(true);
       setError(null);
-      if (projectId === "demo-event-website") {
-        setCanGenerate(true);
-        const { demoWeeklyReports } = await import("@/features/tracking/demo-fixture");
-        if (isMounted) {
-          setReports(demoWeeklyReports);
-          if (demoWeeklyReports.length > 0) {
-            setSelectedReportId(demoWeeklyReports[0].id);
-          }
-          setIsLoading(false);
-        }
-        return;
-      }
       try {
         const context = await loadContext(projectId);
         if (isMounted) setCanGenerate(context.members.some(m => m.userId === context.session.user.id && m.role === "leader"));

@@ -337,9 +337,6 @@ export default function HomePage() {
             <Link className="tf-button" href="/app" style={{ fontSize: "1rem", padding: "12px 24px" }}>
               Bắt đầu lập kế hoạch ngay →
             </Link>
-            <Link className="tf-button secondary" href="/app/projects/demo-event-website/tasks" style={{ fontSize: "1rem", padding: "12px 24px" }}>
-              Xem dự án mẫu minh họa
-            </Link>
           </div>
         </section>
 

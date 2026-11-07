@@ -82,9 +82,6 @@ export function AppShell({
             <Link href="/app/projects/new" aria-current={path.endsWith("/new") ? "page" : undefined}>
               ＋ &nbsp; Tạo dự án
             </Link>
-            <Link href="/app/projects/demo-event-website/tasks" aria-current={path.includes("demo-event-website") ? "page" : undefined}>
-              ✨ &nbsp; Dự án minh họa
-            </Link>
           </nav>
           <div className="tf-side-note">
             <b>AI hỗ trợ. Bạn quyết định.</b>

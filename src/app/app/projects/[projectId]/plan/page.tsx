@@ -6,13 +6,6 @@ import { users } from "@/server/db/schema";
 import { HttpError } from "@/server/http/errors";
 import { planningService } from "@/features/planning/server/implementation";
 import { PlanEditor } from "@/features/planning/components/plan-editor";
-import {
-  DEMO_PROJECT_ID,
-  demoProject,
-  demoMembers,
-  demoPlan,
-  demoUsers,
-} from "@/features/tracking/demo-fixture";
 
 export default async function Page({
   params,
@@ -22,19 +15,6 @@ export default async function Page({
   }>;
 }) {
   const { projectId } = await params;
-
-  if (projectId === DEMO_PROJECT_ID) {
-    const data = {
-      details: {
-        project: demoProject,
-        members: demoMembers.map((m) => m.member),
-      },
-      initialPlan: demoPlan,
-      users: demoUsers,
-      leader: true,
-    };
-    return <PlanEditor {...data} />;
-  }
 
   let data;
   try {

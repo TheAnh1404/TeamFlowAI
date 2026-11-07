@@ -82,7 +82,6 @@ export function ChatPanel({
   const [content, setContent] = useState("");
   const [taskId, setTaskId] = useState("");
   const [filterMode, setFilterMode] = useState<"all" | "clarify" | "has_task">("all");
-  const [extraMessages, setExtraMessages] = useState<Message[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const attempt = useRef<{ fingerprint: string; key: string } | null>(null);
@@ -135,34 +134,6 @@ export function ChatPanel({
     }
 
     try {
-      if (data.project.id === "demo-event-website") {
-        const newMsg: Message = {
-          id: `msg-demo-${Date.now()}`,
-          projectId: data.project.id,
-          authorMemberId: data.actor.id,
-          content: content.trim(),
-          taskId: taskId || null,
-          candidateTaskIds: taskId ? [] : data.tasks.map((t) => t.id),
-          resolution: taskId ? "applied" : "clarification_required",
-          clarificationQuestion: taskId
-            ? null
-            : "Coordinator: Bạn đang cập nhật cho công việc nào trong danh sách?",
-          aiMode: "real",
-          createdAt: new Date().toISOString(),
-        };
-        setExtraMessages((prev) => [...prev, newMsg]);
-        setContent("");
-        if (textareaRef.current) {
-          textareaRef.current.style.height = "auto";
-        }
-        attempt.current = null;
-        atBottom.current = true;
-        setTimeout(() => {
-          feedRef.current?.scrollTo({ top: feedRef.current.scrollHeight, behavior: "smooth" });
-        }, 50);
-        return;
-      }
-
       await mutate(apiRoutes.tracking.messages(data.project.id), body, attempt.current.key);
       setContent("");
       if (textareaRef.current) {
@@ -199,7 +170,7 @@ export function ChatPanel({
   }
 
   // Filter messages based on header filter mode
-  const allMessages = [...data.messages, ...extraMessages];
+  const allMessages = data.messages;
   const filteredMessages = allMessages.filter((msg) => {
     if (filterMode === "clarify") return msg.resolution === "clarification_required";
     if (filterMode === "has_task") return Boolean(msg.taskId);
@@ -638,10 +609,6 @@ function ResolveForm({ message, data }: { message: Message; data: WorkspaceData 
     }
 
     try {
-      if (data.project.id === "demo-event-website") {
-        router.refresh();
-        return;
-      }
       await mutate(apiRoutes.tracking.resolve(message.id), body, attempt.current.key);
       router.refresh();
     } catch (e) {

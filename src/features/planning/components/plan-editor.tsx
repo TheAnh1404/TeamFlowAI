@@ -62,15 +62,6 @@ export function PlanEditor({
     setError("");
     setNotice("");
     try {
-      if (details.project.id === "demo-event-website") {
-        if (kind === "save") {
-          setNotice("Đã lưu thành công bản nháp kế hoạch (Chế độ minh họa).");
-        }
-        if (kind === "publish") {
-          router.push(routes.tasks(details.project.id));
-        }
-        return;
-      }
       if (kind === "generate") {
         const p = (
           await apiFetch(api.plan(details.project.id), planSchema, {

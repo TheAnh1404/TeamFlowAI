@@ -66,7 +66,6 @@ export function createPlanningService(db: Database, planner = createPlanner()): 
             return db.transaction(async (tx) => {
                 await lockProject(tx, id);
                 await access(tx, s, id, true);
-                await noPlan(tx, id);
                 assert((await tx.select().from(users).where(eq(users.id, input.userId))).length, 422, "VALIDATION_ERROR", "Tài khoản không tồn tại.");
                 const { members } = await details(tx, id);
                 assert(!members.some(m => m.userId === input.userId), 409, "MEMBER_EXISTS", "Thành viên đã có trong dự án.");
