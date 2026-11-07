@@ -2,7 +2,7 @@
 
 ## Trạng thái và giới hạn
 
-Đã triển khai hoàn tất module Delivery (`src/features/delivery/`), tầng AI dùng chung (`src/server/ai/`), 5 API endpoints (`submissions`, `review`, `accept`, `reports`, `reportDetail`), và trang Báo cáo tuần P08 (`src/app/app/projects/[projectId]/reports/page.tsx`).
+Đã triển khai hoàn tất module Delivery (`src/features/delivery/`), tầng AI dùng chung (`src/server/ai/`), 7 API endpoints (`submissions`, `review`, `accept`, `reports`, `reportDetail`, `export/docx`, `export/excel`), và trang Báo cáo tuần P08 (`src/app/app/projects/[projectId]/reports/page.tsx`). Đã tích hợp bộ biên tập tự động đa phương thức: xuất file Word (.docx) chuẩn hồ sơ nghiệm thu, xuất file Excel (.xlsx) đa tầng KPIs và hỗ trợ bằng chứng hình ảnh.
 
 Tầng AI hỗ trợ song song hai chế độ:
 1. **Real AI**: Tự động nhận diện `GEMINI_API_KEY` (Gemini 2.5 Flash) hoặc `OPENAI_API_KEY` (GPT-4o-mini), ép kiểu JSON schema nghiêm ngặt, timeout 25 giây qua `AbortController`.
@@ -125,5 +125,24 @@ Toàn bộ các lệnh kiểm tra bắt buộc của dự án đã chạy và đ
 
 - **`npm test`**: **17/17 tests passed** (Kiểm tra PGlite áp migrations, atomic rollback, idempotency retry, AI timeout/fallback).
 - **`npm run check`**: **0 errors, 0 warnings** (Clean ESLint và TypeScript strict typegen).
-- **`npm run build`**: **Compiled successfully** với Next.js 16 Turbopack (29/29 routes hợp lệ).
+- **`npm run build`**: **Compiled successfully** với Next.js 16 Turbopack (31/31 routes hợp lệ).
+
+---
+
+## 5. Xuất Bản Đa Phương Thức (Word, Excel & Ảnh Minh Chứng)
+
+TV3 đã cung cấp bộ công cụ đóng gói sản phẩm hoàn chỉnh của dự án:
+
+1. **Xuất Hồ sơ Tổng kết Word (.docx)** (`GET /api/projects/[projectId]/export/docx`):
+   - Tự động biên dịch toàn bộ các Task đã được nghiệm thu (`status === "done"`) thành cuốn báo cáo chuẩn.
+   - Trang bìa chuẩn, mục lục, bảng tiêu chí nghiệm thu đạt chuẩn `met`, bảo toàn 100% nội dung bài nộp của tác giả.
+   - Thư viện: `docx`.
+2. **Xuất Bảng tính KPIs & Tiến độ Excel (.xlsx)** (`GET /api/projects/[projectId]/reports/[reportId]/export/excel`):
+   - Sheet 1: Dashboard KPIs và phân bố trạng thái công việc.
+   - Sheet 2: Toàn bộ danh sách Task, Deadline, Người phụ trách và thời gian nghiệm thu.
+   - Sheet 3: Nhận định AI kèm liên kết dẫn chứng.
+   - Thư viện: `exceljs`.
+3. **Bằng chứng Hình ảnh (Image Evidence)**:
+   - Form nộp bài hỗ trợ chèn link ảnh/bằng chứng Markdown `![Mô tả](url)`.
+   - Lịch sử bài nộp tự động hiển thị Gallery ảnh trực quan để Leader và Reviewer AI thẩm định.
 

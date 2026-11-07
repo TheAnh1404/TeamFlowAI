@@ -113,9 +113,25 @@ export function SubmissionForm({ task, onSubmitted, disabled = false, onDirtyCha
 
       {/* Content TextArea */}
       <div>
-        <label htmlFor="submission-content" className="mb-1 block text-xs font-semibold text-[var(--color-text-secondary)]">
-          Nội dung bài nộp (Bắt buộc)
-        </label>
+        <div className="mb-1 flex items-center justify-between">
+          <label htmlFor="submission-content" className="block text-xs font-semibold text-[var(--color-text-secondary)]">
+            Nội dung bài nộp (Bắt buộc)
+          </label>
+          {contentType === "markdown" && (
+            <button
+              type="button"
+              onClick={() => {
+                const sample = "\n\n![Ảnh chụp màn hình minh chứng nghiệm thu](https://images.unsplash.com/photo-1551288049-bebda4e38f71)\n";
+                const updated = content + sample;
+                setContent(updated);
+                onDirtyChange?.(updated.trim().length > 0);
+              }}
+              className="text-[11px] font-medium text-[var(--color-primary)] hover:underline"
+            >
+              + Chèn mẫu ảnh minh chứng
+            </button>
+          )}
+        </div>
         <textarea
           id="submission-content"
           rows={6}

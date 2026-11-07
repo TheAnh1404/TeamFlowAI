@@ -71,6 +71,38 @@ export function SubmissionHistory({
         <div className="max-h-80 overflow-y-auto rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface-subtle)] p-4 text-sm font-mono leading-relaxed whitespace-pre-wrap text-[var(--color-text-primary)]">
           {selected.content}
         </div>
+
+        {/* Image Evidence Gallery Preview nếu có ảnh đính kèm */}
+        {(() => {
+          const imageMatches = Array.from(
+            selected.content.matchAll(/!\[(.*?)\]\((https?:\/\/[^\s)]+)\)/g)
+          );
+          if (imageMatches.length === 0) return null;
+
+          return (
+            <div className="rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface)] p-3 space-y-2">
+              <div className="text-xs font-semibold text-[var(--color-text-secondary)] flex items-center gap-1.5">
+                <span>🖼️</span> Bằng chứng hình ảnh đính kèm ({imageMatches.length} ảnh):
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                {imageMatches.map((m, idx) => (
+                  <div key={idx} className="rounded-lg border border-[var(--color-border-subtle)] overflow-hidden bg-[var(--color-surface-subtle)]">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={m[2]}
+                      alt={m[1] || `Bằng chứng ${idx + 1}`}
+                      className="w-full h-40 object-cover hover:scale-105 transition-transform duration-200"
+                      loading="lazy"
+                    />
+                    <div className="p-2 text-[11px] text-[var(--color-text-muted)] truncate">
+                      {m[1] || `Ảnh minh chứng #${idx + 1}`}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );
