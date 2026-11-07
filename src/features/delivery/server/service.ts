@@ -5,7 +5,7 @@ import {
   confirmAcceptanceInputSchema, generateWeeklyReportInputSchema, submitWorkInputSchema,
   type ConfirmAcceptanceInput, type GenerateWeeklyReportInput, type Id, type MutationOptions,
   type RequestReviewResult, type Review, type Submission, type SubmitWorkInput,
-  type SubmitWorkResult, type Task, type WeeklyReport, type ReportMetrics, type SourceRef, sourceRefSchema,
+  type SubmitWorkResult, type Task, type TaskStatus, type WeeklyReport, type ReportMetrics, type SourceRef, sourceRefSchema,
 } from "@/contracts";
 import { aiProvider } from "@/server/ai";
 import type { AiProvider, ReportAiInput } from "@/server/ai/contracts";
@@ -19,6 +19,31 @@ import { mutationResults, submissions, reviews, tasks, weeklyReports, messages, 
 import { assert, conflict, notFound } from "@/server/http/errors";
 import { findReview, listTaskSubmissions, lockDeliveryTask, submissionWithMember } from "./repository";
 
+export class DeliveryServiceError extends Error {
+  constructor(
+    public readonly status: number,
+    public readonly code: string,
+    message: string,
+  ) {
+    super(message);
+    this.name = "DeliveryServiceError";
+  }
+}
+
+export interface ProjectConsolidatedDeliverable {
+  projectId: Id;
+  isAllTasksAccepted: boolean;
+  totalTasks: number;
+  acceptedTasksCount: number;
+  pendingTasks: { id: string; title: string; status: TaskStatus; assigneeMemberId: string }[];
+  completedSections: {
+    task: Task;
+    acceptedSubmission: Submission | null;
+    review: Review | null;
+  }[];
+  assembledAt: string | null;
+}
+
 export interface DeliveryService {
   submitWork(session: Session, taskId: Id, input: SubmitWorkInput, options: MutationOptions): Promise<SubmitWorkResult>;
   listSubmissions(session: Session, taskId: Id): Promise<Submission[]>;
@@ -29,6 +54,7 @@ export interface DeliveryService {
   listReports(session: Session, projectId: Id): Promise<WeeklyReport[]>;
   getReport(session: Session, reportId: Id): Promise<WeeklyReport>;
   getReportSource(session: Session, reportId: Id, ref: SourceRef): Promise<unknown>;
+  getProjectConsolidatedDeliverable(session: Session, projectId: Id): Promise<ProjectConsolidatedDeliverable>;
 }
 
 // Refresh DB permissions even on replay; result and business writes commit together.
@@ -193,6 +219,52 @@ export function createDeliveryService(db: Database, ai: AiProvider = aiProvider)
       if (!source || source.projectId !== report.projectId) throw notFound();
       return source;
     },
+    async getProjectConsolidatedDeliverable(session, projectId) {
+      await projectMember(db, session, projectId);
+      const { asOf, sources } = await readReportSnapshot(session, projectId, db);
+      const totalTasks = sources.tasks.length;
+      const acceptedTasks = sources.tasks.filter((t) => t.status === "done");
+      const pendingTasks = sources.tasks
+        .filter((t) => t.status !== "done")
+        .map((t) => ({
+          id: t.id,
+          title: t.title,
+          status: t.status,
+          assigneeMemberId: t.assigneeMemberId,
+        }));
+
+      // Bất biến: CHỈ KHI 100% CÔNG VIỆC ĐƯỢC LEADER DUYỆT thì mới xác nhận hoàn chỉnh
+      const isAllTasksAccepted = totalTasks > 0 && pendingTasks.length === 0;
+
+      const completedSections = sources.tasks.map((task) => {
+        const taskSubs = sources.submissions
+          .filter((s) => s.taskId === task.id)
+          .sort((a, b) => b.revision - a.revision);
+        const acceptedSubmission = task.acceptedSubmissionId
+          ? taskSubs.find((s) => s.id === task.acceptedSubmissionId) || taskSubs[0] || null
+          : taskSubs[0] || null;
+
+        const review = acceptedSubmission
+          ? sources.reviews.find((r) => r.submissionId === acceptedSubmission.id) || null
+          : null;
+
+        return {
+          task,
+          acceptedSubmission,
+          review,
+        };
+      });
+
+      return {
+        projectId,
+        isAllTasksAccepted,
+        totalTasks,
+        acceptedTasksCount: acceptedTasks.length,
+        pendingTasks,
+        completedSections,
+        assembledAt: isAllTasksAccepted ? asOf : null,
+      };
+    },
   };
 }
 
@@ -225,4 +297,5 @@ export const deliveryService: DeliveryService = {
   listReports: (...a) => createDeliveryService(getDb()).listReports(...a),
   getReport: (...a) => createDeliveryService(getDb()).getReport(...a),
   getReportSource: (...a) => createDeliveryService(getDb()).getReportSource(...a),
+  getProjectConsolidatedDeliverable: (...a) => createDeliveryService(getDb()).getProjectConsolidatedDeliverable(...a),
 };

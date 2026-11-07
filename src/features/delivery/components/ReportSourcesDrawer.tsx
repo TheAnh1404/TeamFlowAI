@@ -4,14 +4,26 @@ import React, { useEffect, useState } from "react";
 import type { SourceRef } from "@/contracts/report";
 
 interface ReportSourcesDrawerProps {
-  reportId: string;
+  reportId?: string;
   sourceRef: SourceRef | null;
   onClose: () => void;
 }
 
-export function ReportSourcesDrawer({ reportId, sourceRef, onClose }: ReportSourcesDrawerProps) {
+export function ReportSourcesDrawer({ reportId = "", sourceRef, onClose }: ReportSourcesDrawerProps) {
   const [content, setContent] = useState<{ key: string; text: string } | null>(null);
   const sourceKey = `${reportId}:${sourceRef?.entity}:${sourceRef?.id}`;
+
+  useEffect(() => {
+    if (!sourceRef) return;
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [sourceRef, onClose]);
+
   useEffect(() => {
     if (!sourceRef) return;
     if (reportId.startsWith("report-demo")) {
@@ -41,23 +53,33 @@ export function ReportSourcesDrawer({ reportId, sourceRef, onClose }: ReportSour
       .catch(error => { if (!abort.signal.aborted) setContent({ key: sourceKey, text: error instanceof Error ? error.message : "Không thể đọc nguồn." }); });
     return () => abort.abort();
   }, [reportId, sourceRef, sourceKey]);
+
   if (!sourceRef) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-xs">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="drawer-source-title"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-xs"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
       <div className="w-full max-w-lg rounded-xl border border-[var(--color-border-subtle)] bg-[var(--color-surface)] p-6 shadow-xl animate-in fade-in zoom-in-95 duration-150">
         <div className="flex items-center justify-between border-b border-[var(--color-border-subtle)] pb-3">
           <div className="flex items-center gap-2">
             <span className="rounded bg-[var(--color-primary-soft)] px-2 py-0.5 text-xs font-bold text-[var(--color-primary)]">
               {sourceRef.entity}
             </span>
-            <h3 className="text-base font-semibold text-[var(--color-text-primary)]">
+            <h3 id="drawer-source-title" className="text-base font-semibold text-[var(--color-text-primary)]">
               Chi tiết nguồn dẫn chứng #{sourceRef.id}
             </h3>
           </div>
           <button
             type="button"
             onClick={onClose}
+            aria-label="Đóng cửa sổ dẫn chứng"
             className="rounded p-1 text-[var(--color-text-muted)] hover:bg-[var(--color-surface-subtle)] hover:text-[var(--color-text-primary)]"
           >
             ✕
@@ -92,4 +114,3 @@ export function ReportSourcesDrawer({ reportId, sourceRef, onClose }: ReportSour
     </div>
   );
 }
-
