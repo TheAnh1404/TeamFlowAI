@@ -1,0 +1,10 @@
+import { createRoot } from "react-dom/client";
+import { AppShell } from "../../src/components/layout/app-shell";
+import { ProjectWizard } from "../../src/features/planning/components/wizard";
+import { PlanEditor } from "../../src/features/planning/components/plan-editor";
+import type { Plan, ProjectDetails } from "../../src/contracts";
+export const users = [1, 2, 3].map(n => ({ id: `u${n}`, displayName: `TV${n}`, createdAt: "2026-01-01T00:00:00Z" }));
+export const details: ProjectDetails = { project: { id: "p1", name: "Demo TeamFlow", goal: "Hoàn thành bản demo", deliverables: ["Demo"], deadline: "2099-12-01T16:59:59Z", timeZone: "Asia/Ho_Chi_Minh", createdAt: users[0].createdAt }, members: users.map((u, i) => ({ id: `m${i + 1}`, projectId: "p1", userId: u.id, role: i === 0 ? "leader" : "member", canAccept: i === 0, skills: ["Software"], availableHoursPerWeek: 10 })) };
+export const plan: Plan = { id: "plan1", projectId: "p1", status: "draft", version: 1, aiMode: "mock", approvedByMemberId: null, publishedAt: null, createdAt: users[0].createdAt, draftTasks: [1, 2].map(n => ({ id: `t${n}`, title: `Công việc ${n}`, description: "Chuẩn bị demo", assigneeMemberId: `m${n}`, deadline: details.project.deadline, criteria: [{ id: `c${n}`, text: "Có bản demo để kiểm tra" }], dependencyTaskIds: [] })) };
+const screen = new URLSearchParams(location.search).get("screen");
+createRoot(document.getElementById("root")!).render(<AppShell>{screen === "plan" ? <PlanEditor details={details} initialPlan={plan} users={users} leader/> : <ProjectWizard users={users} actorId="u1"/>}</AppShell>);

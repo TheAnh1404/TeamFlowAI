@@ -1,5 +1,3 @@
-# Component UI chung — TV1
+# UI chung — TV1
 
-TV1 sẽ triển khai component dùng chung ở đây; scaffold chưa có Button/Dialog/Table/Toast. Tokens nằm tại `src/app/globals.css`, nguồn thiết kế [DESIGN_SYSTEM](../../../docs/ui/DESIGN_SYSTEM.md).
-
-Component placeholder tạm thời ở `src/components/scaffolding/placeholder-page.tsx`, không phải component library sản phẩm.
+primitives.tsx export Button (native button props), Alert (role alert), Badge và Stepper ({step,labels}). CSS tf-* tại globals.css dùng token DESIGN_SYSTEM. Dialog công bố dùng native dialog để giữ focus/Escape. Không đổi tên hay ý nghĩa các token trạng thái dùng bởi TV2/TV3.

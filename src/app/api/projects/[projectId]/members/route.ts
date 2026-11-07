@@ -1,4 +1,9 @@
-import { notImplementedResponse } from "@/server/http/not-implemented";
-
-// TODO(TV1): implement only in the assigned feature session; no DB/auth/AI here.
-export const POST = notImplementedResponse;
+import { endpoint, readJson, assertSameOrigin } from "@/server/http/errors";
+import { requireSession } from "@/server/auth";
+import { planningService } from "@/features/planning/server/implementation";
+import * as c from "@/contracts";
+export async function POST(request: Request, context: {
+    params: Promise<{
+        projectId: string;
+    }>;
+}) { return endpoint(async () => { const p = await context.params; assertSameOrigin(request); const session = await requireSession(); return planningService().addProjectMember(session, c.idSchema.parse(p.projectId), await readJson(request, c.addProjectMemberInputSchema)); }); }

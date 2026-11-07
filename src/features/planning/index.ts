@@ -1,3 +1,4 @@
-// Public, client-safe entry. TODO(TV1): explicitly export future planning UI here.
-// Server entry: import server/service or server/repository only from server code.
+// Public, client-safe entry. Server implementation is imported separately.
+export { ProjectWizard } from "./components/wizard";
+export { PlanEditor } from "./components/plan-editor";
 export type { Project, ProjectMember, Plan, DraftTask } from "@/contracts";
