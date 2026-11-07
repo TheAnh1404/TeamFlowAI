@@ -1,5 +1,5 @@
-# UI shell — TV1
+# Shell dùng chung — TV1
 
-TV1 triển khai layout/điều hướng dùng chung tại đây trong phiên tính năng. Entry gốc hiện tại: `src/app/layout.tsx`. Scaffold chưa có sidebar/topbar/responsive shell.
+`AppShell` trong app-shell.tsx nhận children, gắn tại src/app/app/layout.tsx. TV2/TV3 giữ page adapter của mình; mọi trang dưới /app dùng chung topbar/sidebar. Không cần bọc AppShell lần nữa.
 
-Tuân thủ [UI rules](../../../docs/ui/UI_RULES.md) và [design system](../../../docs/ui/DESIGN_SYSTEM.md). TV2/TV3 gửi điểm gắn, tránh cùng sửa file layout. Không tạo nguồn shell thứ hai tại `src/ui/`.
+Nội dung tự khai báo main; các trang TV1 dùng tf-page, các màn TV2 giữ workspace hiện có. Token tại globals.css. Xem docs/TV1_HANDOFF.md.

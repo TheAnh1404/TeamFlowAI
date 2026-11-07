@@ -1,7 +1,18 @@
-import { notImplementedResponse } from "@/server/http/not-implemented";
+import { endpoint, readJson, assertSameOrigin } from "@/server/http/errors";
+import { requireSession } from "@/server/auth";
+import { planningService } from "@/features/planning/server/implementation";
 import { getProjects } from "@/features/tracking/server/handlers";
+import * as c from "@/contracts";
 
-// TODO(TV1): implement only in the assigned feature session; no DB/auth/AI here.
-export const POST = notImplementedResponse;
-// TV2 read model; TV1 retains POST.
 export const GET = getProjects;
+
+export async function POST(request: Request) {
+  return endpoint(async () => {
+    assertSameOrigin(request);
+    const session = await requireSession();
+    return planningService().createProject(
+      session,
+      await readJson(request, c.createProjectInputSchema)
+    );
+  });
+}

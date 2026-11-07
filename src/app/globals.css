@@ -1,6 +1,9 @@
-@import "tailwindcss";
+
+
+@import "tailwindcss" ;
 
 /* Source: docs/ui/DESIGN_SYSTEM.md. TODO(TV1): product UI, shell and components. */
+
 @theme {
   --color-canvas: #F8FAFC;
   --color-surface: #FFFFFF;
@@ -57,13 +60,473 @@ h1 {
   line-height: 1.3;
 }
 
-p { margin-block: 0 1rem; }
-a { color: var(--color-primary); text-decoration: underline; }
-a:hover { color: var(--color-primary-hover); }
+p {
+  margin-block: 0 1rem;
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+
+a:hover {
+  color: var(--color-primary-hover);
+}
+
 a:focus-visible, button:focus-visible {
   outline: 2px solid var(--color-focus-ring);
   outline-offset: 2px;
 }
 
-nav ul { margin: 0; padding: 0; list-style: none; }
-nav a { display: inline-flex; align-items: center; min-height: 44px; }
+nav ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+
+.tf-topbar {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 16px 32px;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border-subtle)
+}
+
+.tf-brand {
+  font-size: 22px;
+  font-weight: 700;
+  text-decoration: none;
+  color: var(--color-text-primary);
+  margin-right: auto
+}
+
+.tf-brand b {
+  color: var(--color-primary)
+}
+
+.tf-community,.tf-muted {
+  color: var(--color-text-secondary)
+}
+
+.tf-shell {
+  display: grid;
+  grid-template-columns: 232px minmax(0,1fr);
+  min-height: calc(100vh - 77px)
+}
+
+.tf-sidebar {
+  padding: 32px 20px;
+  border-right: 1px solid var(--color-border-subtle);
+  background: var(--color-surface)
+}
+
+.tf-sidebar nav {
+  display: grid;
+  gap: 8px
+}
+
+.tf-sidebar nav a {
+  padding: 8px;
+  text-decoration: none;
+  border-radius: 8px
+}
+
+.tf-sidebar [aria-current=page] {
+  background: var(--color-primary-soft);
+  font-weight: 700
+}
+
+.tf-side-note {
+  margin-top: 80px;
+  padding: 16px;
+  background: var(--color-surface-subtle);
+  border-radius: 12px;
+  font-size: 14px
+}
+
+.tf-side-note p {
+  margin: 8px 0 0
+}
+
+.tf-content {
+  min-width: 0
+}
+
+main.tf-page {
+  max-width: 1100px;
+  padding: 32px;
+  box-sizing: border-box;
+  width: 100%
+}
+
+.tf-eyebrow {
+  font-size: 12px;
+  letter-spacing: .12em;
+  font-weight: 700;
+  color: var(--color-primary);
+  margin-bottom: 12px
+}
+
+.tf-card {
+  padding: 24px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 14px;
+  background: var(--color-surface);
+  margin-bottom: 20px
+}
+
+.tf-card h2 {
+  margin-top: 0;
+  font-size: 21px
+}
+
+.tf-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap
+}
+
+.tf-two {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px
+}
+
+.tf-page label {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0;
+  font-weight: 600
+}
+
+.tf-page input,.tf-page textarea,.tf-page select {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 44px;
+  border: 1px solid var(--color-control-border);
+  border-radius: 7px;
+  background: var(--color-surface);
+  padding: 10px 12px;
+  font: inherit;
+  color: var(--color-text-primary)
+}
+
+.tf-page textarea {
+  min-height: 88px;
+  resize: vertical
+}
+
+.tf-page fieldset {
+  min-width: 0;
+  border: 0;
+  padding: 0;
+  margin: 16px 0
+}
+
+.tf-page .tf-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 400
+}
+
+.tf-check input {
+  width: 18px;
+  min-height: 18px;
+  flex-shrink: 0
+}
+
+.tf-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 10px 18px;
+  box-sizing: border-box;
+  border: 1px solid var(--color-primary);
+  border-radius: 8px;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none
+}
+
+.tf-button:hover {
+  background: var(--color-primary-hover);
+  color: var(--color-on-primary)
+}
+
+.tf-button.secondary {
+  background: var(--color-surface);
+  color: var(--color-primary)
+}
+
+.tf-button:disabled {
+  opacity: .5;
+  cursor: not-allowed
+}
+
+.tf-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 20px 0
+}
+
+.tf-badge {
+  display: inline-flex;
+  padding: 5px 10px;
+  border-radius: 6px;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  font-size: 13px;
+  font-weight: 600
+}
+
+.tf-alert {
+  border-left: 4px solid var(--color-overdue);
+  padding: 16px;
+  background: var(--color-overdue-soft);
+  color: var(--color-overdue);
+  margin: 16px 0
+}
+
+.tf-steps {
+  display: flex;
+  list-style: none;
+  padding: 0;
+  gap: 12px;
+  margin: 28px 0
+}
+
+.tf-steps li {
+  flex: 1;
+  color: var(--color-text-secondary);
+  border-bottom: 3px solid var(--color-border-subtle);
+  padding: 12px 0
+}
+
+.tf-steps span {
+  margin-right: 8px
+}
+
+.tf-steps [aria-current=step] {
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+  font-weight: 700
+}
+
+.tf-tabs {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--color-border-subtle);
+  margin: 16px 0 24px
+}
+
+.tf-tabs a {
+  text-decoration: none;
+  padding: 8px
+}
+
+.tf-tabs [aria-current] {
+  border-bottom: 3px solid var(--color-primary);
+  font-weight: 700
+}
+
+.tf-skip {
+  position: fixed;
+  top: -100px;
+  background: white;
+  padding: 12px;
+  z-index: 100
+}
+
+.tf-skip:focus {
+  top: 8px
+}
+
+.tf-page dialog {
+  max-width: 480px;
+  width: calc(100% - 64px);
+  border: 1px solid var(--color-control-border);
+  border-radius: 14px;
+  padding: 24px
+}
+
+.tf-page dialog::backdrop {
+  background: rgb(15 23 42 / .45)
+}
+
+input:focus-visible,textarea:focus-visible,select:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px
+}
+
+main.tf-landing {
+  max-width: 1280px;
+  padding: 64px 40px
+}
+
+.tf-hero {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  align-items: center;
+  gap: 60px;
+  padding: 40px 0 80px
+}
+
+.tf-hero h1 {
+  font-size: clamp(32px,4vw,56px);
+  letter-spacing: -.04em;
+  line-height: 1.15
+}
+
+.tf-hero em {
+  font-style: normal;
+  color: var(--color-primary)
+}
+
+.tf-lead {
+  font-size: 18px;
+  color: var(--color-text-secondary);
+  max-width: 540px
+}
+
+.tf-preview {
+  padding: 28px;
+  border: 1px solid var(--color-border-subtle);
+  background: var(--color-surface);
+  border-radius: 20px;
+  box-shadow: 0 16px 40px rgb(15 23 42 / .06)
+}
+
+.tf-preview-step {
+  display: flex;
+  gap: 20px;
+  padding: 24px 0;
+  border-bottom: 1px solid var(--color-border-subtle)
+}
+
+.tf-preview-step:last-child {
+  border: 0
+}
+
+.tf-preview-step>span {
+  color: var(--color-primary);
+  font-weight: 700
+}
+
+.tf-preview-step h2 {
+  font-size: 18px;
+  margin: 0 0 6px
+}
+
+.tf-preview-step p {
+  font-size: 14px;
+  margin: 0;
+  color: var(--color-text-secondary)
+}
+
+.tf-three {
+  display: grid;
+  grid-template-columns: repeat(3,1fr);
+  gap: 20px
+}
+
+.tf-landing footer {
+  text-align: center;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  padding: 40px 0
+}
+
+@media(max-width:900px) {
+
+  .tf-shell {
+    grid-template-columns: 1fr
+  }
+
+  .tf-sidebar {
+    padding: 8px 16px;
+    border-right: 0;
+    border-bottom: 1px solid var(--color-border-subtle)
+  }
+
+  .tf-sidebar nav {
+    display: flex;
+    gap: 16px
+  }
+
+  .tf-sidebar .tf-eyebrow,.tf-side-note {
+    display: none
+  }
+
+  .tf-hero {
+    grid-template-columns: 1fr;
+    gap: 32px;
+    padding-top: 0
+  }
+
+  .tf-three {
+    grid-template-columns: 1fr
+  }
+
+  .tf-community {
+    display: none
+  }
+}
+
+@media(max-width:600px) {
+
+  main.tf-page,main.tf-landing {
+    padding: 24px 16px
+  }
+
+  .tf-topbar {
+    padding: 12px 16px;
+    gap: 12px
+  }
+
+  .tf-topbar>a:last-child {
+    font-size: 14px
+  }
+
+  .tf-two {
+    grid-template-columns: 1fr
+  }
+
+  .tf-card {
+    padding: 16px
+  }
+
+  .tf-steps {
+    font-size: 13px
+  }
+
+  .tf-hero {
+    padding-bottom: 32px
+  }
+
+  .tf-preview {
+    padding: 18px
+  }
+}
+
+@media(prefers-reduced-motion:reduce) {
+
+  * {
+    scroll-behavior: auto!important
+  }
+}
