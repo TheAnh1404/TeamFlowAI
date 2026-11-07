@@ -34,9 +34,9 @@ export const getMembers = (request: Request, context: ProjectContext) => apiHand
   const projectId = (await context.params).projectId;
   const query = new URL(request.url).searchParams.get("search")?.trim();
   if (!query) return listProjectMembers(session, projectId);
-  assert(query.length >= 2 && query.length <= 100, 422, "VALIDATION_ERROR", "Nháº­p Ã­t nháº¥t 2 kÃ½ tá»± Ä‘á»ƒ tÃ¬m tÃ i khoáº£n.");
+  assert(query.length >= 2 && query.length <= 100, 422, "VALIDATION_ERROR", "Nhập ít nhất 2 ký tự để tìm tài khoản.");
   const actor = await projectMember(getDb(), session, projectId);
-  assert(actor.role === "leader", 403, "FORBIDDEN", "Chá»‰ trÆ°á»Ÿng nhÃ³m Ä‘Æ°á»£c tÃ¬m tÃ i khoáº£n Ä‘á»ƒ thÃªm vÃ o dá»± Ã¡n.");
+  assert(actor.role === "leader", 403, "FORBIDDEN", "Chỉ trưởng nhóm được tìm tài khoản để thêm vào dự án.");
   const existing = await getDb().select({ userId: projectMembers.userId }).from(projectMembers).where(eq(projectMembers.projectId, projectId));
   const excludedIds = existing.map(({ userId }) => userId);
   return getDb().select({ userId: users.id, displayName: users.displayName, email: users.email })

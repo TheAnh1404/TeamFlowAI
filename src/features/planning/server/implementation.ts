@@ -1,9 +1,9 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { createProjectInputSchema, updateProjectInputSchema, addProjectMemberInputSchema, updateProjectMemberInputSchema, updatePlanDraftInputSchema, publishPlanInputSchema, type Plan, type Project, type Task } from "@/contracts";
 import { getDb, type Database, type DataConnection, type Transaction } from "@/server/db/client";
-import { projects, projectMembers, plans, tasks, users } from "@/server/db/schema";
+import { projects, projectMembers, plans, tasks, users, projectInvitations } from "@/server/db/schema";
 import { projectMember } from "@/server/auth/access";
 import type { Session } from "@/server/auth/contracts";
 import { assert, conflict, notFound } from "@/server/http/errors";
@@ -84,7 +84,7 @@ export function createPlanningService(db: Database, planner = createPlanner()): 
         async getPlan(s, id) { const member = await access(db, s, id); const [plan] = await db.select().from(plans).where(eq(plans.projectId, id)); assert(!plan || plan.status === "published" || member.role === "leader", 403, "FORBIDDEN", "Bản nháp chỉ dành cho trưởng nhóm."); return plan ?? null; },
         async generatePlanDraft(s, id) {
             await access(db, s, id, true);
-            const snapshot = await db.transaction(async (tx) => { await lockProject(tx, id); await noPlan(tx, id); return details(tx, id); });
+            const snapshot = await db.transaction(async (tx) => { await lockProject(tx, id); await noPlan(tx, id); const pendingInvitations = await tx.select().from(projectInvitations).where(and(eq(projectInvitations.projectId, id), eq(projectInvitations.status, "pending"))); assert(!pendingInvitations.length, 409, "INVITATIONS_PENDING", "Hãy chờ thành viên phản hồi lời mời trước khi lập kế hoạch."); return details(tx, id); });
             validateProject(snapshot.project);
             assert(snapshot.members.every(m => m.skills.length && m.availableHoursPerWeek > 0), 422, "VALIDATION_ERROR", "Bổ sung kỹ năng và giờ khả dụng cho mọi thành viên.");
             const result = await withUserAiSettings(db,s,()=>planner(snapshot));

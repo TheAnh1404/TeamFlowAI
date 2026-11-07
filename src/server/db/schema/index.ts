@@ -62,6 +62,18 @@ export const projectMembers = pgTable("project_members", {
   check("leader_can_accept", sql`${t.role} <> 'leader' OR ${t.canAccept}`),
 ]);
 
+export const projectInvitations = pgTable("project_invitations", {
+  id: text().primaryKey(), projectId: text().notNull().references(() => projects.id),
+  inviteeUserId: text().notNull().references(() => users.id), inviterMemberId: text().notNull(),
+  skills: jsonb().$type<string[]>().notNull(), availableHoursPerWeek: doublePrecision().notNull(),
+  status: text({ enum: ["pending", "accepted", "declined"] }).notNull(),
+  createdAt: instant().notNull(), respondedAt: instant(),
+}, t => [
+  unique().on(t.projectId, t.inviteeUserId, t.status),
+  foreignKey({ columns: [t.inviterMemberId, t.projectId], foreignColumns: [projectMembers.id, projectMembers.projectId] }),
+  index("project_invitations_invitee_status_idx").on(t.inviteeUserId, t.status, t.createdAt),
+]);
+
 export const plans = pgTable("plans", {
   id: text().primaryKey(), projectId: text().notNull().references(() => projects.id).unique(),
   status: text({ enum: ["draft", "published"] }).notNull(), version: integer().notNull(),

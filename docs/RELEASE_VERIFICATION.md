@@ -4,7 +4,7 @@ Ngày kiểm chứng: **07/11/2026**. Nhánh bàn giao: **tv1_hung**. Commit the
 
 ## Kết luận và phạm vi
 
-**PASS cho vòng nghiệp vụ MVP trên ứng dụng production chạy cục bộ**, dùng PostgreSQL PGlite lưu bền và AI mẫu được ghi nhãn. Có đủ ba module theo `docs/tasks/TV1_PLANNING.md`, `TV2_TRACKING.md`, `TV3_DELIVERY.md` để chạy luồng dự án → kế hoạch → chat → nộp/review/nghiệm thu → báo cáo. Đây không phải chứng nhận triển khai Neon hoặc chất lượng AI thật.
+**PASS cho kiểm thử dịch vụ cô lập bằng PGlite và AI mẫu được ghi nhãn.** Ứng dụng thực tế chỉ kết nối Neon; PGlite không được dùng làm runtime hoặc dữ liệu triển khai.
 
 Các checklist thời gian 240 phút/video trong tài liệu thiết kế là kế hoạch lịch sử, không được đánh dấu hoàn thành bằng kiểm thử tự động. Phiên này kiểm tra sản phẩm hiện có và xuất bản lên nhánh được yêu cầu; không tạo video hoặc triển khai dịch vụ.
 
@@ -49,7 +49,7 @@ Các checklist thời gian 240 phút/video trong tài liệu thiết kế là k�
 
 ## Giới hạn vận hành còn phải xác nhận bên ngoài
 
-- Chưa kiểm chứng Neon chung và chưa áp migrations mới lên đó. Dữ liệu PGlite kiểm thử không thay cho Neon. Không cần Docker để chạy chế độ diễn tập.
+- Cần áp migrations lên Neon và kiểm tra tích hợp ở môi trường Neon mục tiêu trước khi phát hành. Dữ liệu PGlite kiểm thử không thay cho Neon.
 - Chưa gọi API bằng khóa OpenAI thật của người dùng. Kiểm tra khóa/model/bốn trợ lý trong mục Cấu hình AI là bước người dùng thực hiện khi có credential; chạy thử agent có thể tính phí.
 - Không chứng nhận mọi model chấp nhận JSON mode, quota còn đủ hoặc chất lượng phân công/review của mô hình thật. Lỗi provider có đường xử lý riêng, không được đổi nhãn mock thành real.
 - Xác thực của bản này vẫn là session demo có mã truy cập. Luồng đăng ký/đăng nhập bằng mật khẩu/email trong main mới chưa thuộc bản này.

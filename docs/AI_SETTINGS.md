@@ -18,13 +18,13 @@ Nếu đổi model hoặc nhập khóa mới, kiểm tra lại. Có thể kiểm
 
 - API chỉ nhận khóa qua body JSON cùng origin và session hợp lệ. Không có tham số URL chứa key; không lưu vào localStorage/sessionStorage và không trả lại khóa hoặc ciphertext qua API.
 - DB chỉ lưu ciphertext AES-256-GCM với nonce ngẫu nhiên và AAD theo user ID. Khóa của người A không được dùng để giải mã hàng của người B. Xử lý đồng thời dùng AsyncLocalStorage, tránh lẫn credential giữa các yêu cầu.
-- Local demo giữ khóa mã hóa riêng tại `.cache/private-ai/encryption-key`, được Git ignore. Cần bảo toàn cả DB `.cache/<DEMO_DATABASE_NAME>` và thư mục khóa khi sao lưu/khôi phục trên máy. Không xóa hoặc công bố thư mục khóa.
+- Cấu hình triển khai Neon bắt buộc đặt `AI_SETTINGS_ENCRYPTION_KEY` (32 byte mã hóa base64) trong môi trường bí mật. Không lưu khóa mã hóa trong DB hoặc Git.
 - Trên Neon/máy chủ, người vận hành phải đặt `AI_SETTINGS_ENCRYPTION_KEY` (32 byte mã hóa base64) trong môi trường bảo mật. Nếu chưa có, UI báo chưa thể lưu khóa an toàn. Không đặt khóa mã hóa chung trong DB/Git; thay khóa mã hóa cần kế hoạch chuyển đổi ciphertext hoặc người dùng nhập lại API key.
 - Lỗi 401, 403, 404, 429, timeout và đầu ra không đúng cấu trúc được phân biệt bằng thông báo ngắn. Không trả raw error body từ OpenAI hoặc log API key. Endpoint kiểm tra giới hạn 8 lần/tài khoản/phút trong mỗi tiến trình.
 
 ## Thay đổi và kiểm chứng
 
-- Migration `0004_user_ai_settings.sql` thêm bảng `user_ai_settings`; không sửa/xóa dữ liệu nghiệp vụ. Cần migrate trước khi gọi các luồng AI mới. Local demo dùng `demo:setup` sau khi dừng web; không mở hai tiến trình cùng ghi PGlite. Chưa áp migration vào Neon chung.
+- Migration thêm bảng `user_ai_settings`; không sửa/xóa dữ liệu nghiệp vụ. Cần áp migration lên Neon trước khi gọi các luồng AI mới. PGlite chỉ được dùng trong test.
 - API: GET/PUT/DELETE `/api/ai/settings`, POST `/api/ai/settings/check`.
 - Khóa nhập trên UI chỉ dùng qua máy chủ. `store:false` được gửi trong yêu cầu Chat Completions; việc này không thay thế chính sách dữ liệu của nhà cung cấp.
 - Đã kiểm tra bằng unit tests, API giả lập cho luồng check và giao diện. Kiểm thử production lưu khóa giả trong mode mock, xác nhận không echo key, tách tài khoản, giữ cấu hình qua restart và xóa cấu hình riêng. Các test không gọi OpenAI bằng khóa thật và không phát sinh phí mô hình.

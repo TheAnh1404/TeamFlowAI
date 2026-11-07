@@ -17,6 +17,7 @@ import { apiRoutes, routes } from "@/lib/routes";
 import { Alert, Button } from "@/components/ui/primitives";
 import { draftProblems } from "../validation";
 import { useUnsavedChanges } from "./use-unsaved-changes";
+import { ProjectInvitations } from "./project-invitations";
 
 const api = apiRoutes.planning;
 
@@ -176,6 +177,8 @@ export function PlanEditor({
           </div>
         )}
       </div>
+
+      {leader && !plan && <ProjectInvitations projectId={details.project.id} />}
 
       <nav className="tf-tabs" aria-label="Điều hướng dự án">
         {[

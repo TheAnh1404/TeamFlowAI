@@ -37,7 +37,7 @@ Diễn tập đã phát hiện và sửa lỗi kiểm tra Origin khi Next chuẩ
 - Nghiệm thu chỉ dùng revision mới nhất đã có review đầy đủ, bằng chứng đúng submission và mọi tiêu chí met. Review cũ vẫn lưu nhưng không đổi trạng thái revision mới. AI không tự ghi done.
 - Báo cáo lấy `readReportSnapshot`, giữ metrics/refs/asOf, phân biệt thời điểm nộp và nghiệm thu. Endpoint source kiểm quyền, report ref và project. Task hiện tại có nhãn rõ, không dùng để tính lại report cũ.
 - Migration `0003_mentor_notifications.sql` chỉ thêm `project_mentors`, `notifications` và các FK/index/unique tương ứng. SQL đã được kiểm tra và áp trên PGlite. Đầu mối DB cần đọc rồi migrate trên Neon trước khi chạy bản nâng cấp ở đó.
-- Trên local-demo, bộ quét chạy cùng web process để tránh hai tiến trình truy cập cùng file PGlite. Trên Neon chạy `npm run worker:deadlines` dưới trình quản lý tiến trình; không phụ thuộc trình duyệt và không biến report thành scheduler.
+- Ứng dụng và deadline worker kết nối Neon. PGlite chỉ được dùng để cô lập migration/service tests.
 - Notification unique theo project/recipient/kind, kiểm recipient khi đọc, xóa notice khi thu hồi mentor. Khi tiến độ vượt 80%, thông báo được đánh dấu đã cải thiện.
 - Public AI proposal giữ các field cũ, bổ sung tùy chọn steps/assignmentReason/estimatedHours. Planner chuẩn hóa nội dung vào description của task, không đổi ID/schema Task/Plan đã công bố. API demo bổ sung MENTOR; seed lặp an toàn thêm danh tính, không xóa dữ liệu.
 

@@ -29,12 +29,9 @@
     "test:coordinator": "node --conditions=react-server --import ./scripts/register-test-typescript.mjs --test --test-isolation=none tests/coordinator.test.ts",
     "coordinator:tick": "node scripts/coordinator-tick.mjs",
     "worker:deadlines": "node --conditions=react-server --import tsx scripts/deadline-worker.ts",
-    "demo:setup": "node --conditions=react-server --import tsx scripts/demo-setup.ts",
-    "demo:start": "tsx scripts/demo-start.ts",
     "test:rehearsal": "tsx tests/browser/rehearsal.ts"
   },
   "dependencies": {
-    "@electric-sql/pglite": "^0.5.15",
     "@neondatabase/serverless": "1.2.0",
     "@node-rs/argon2": "^2.2.2",
     "drizzle-orm": "0.45.4",
@@ -45,6 +42,7 @@
     "zod": "4.6.7"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.15",
     "@next/env": "16.4.5",
     "@playwright/test": "^1.65.0",
     "@tailwindcss/postcss": "4.3.0",

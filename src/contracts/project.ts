@@ -51,5 +51,7 @@ export const projectSummarySchema = projectSchema.extend({
   planStatus: planStatusSchema.nullable(),
   memberCount: z.number().int(),
   taskCounts: z.object({ total: z.number().int(), done: z.number().int(), blocked: z.number().int() }),
+  myRole: projectRoleSchema.optional(),
+  canAccept: z.boolean().optional(),
 });
 export type ProjectSummary = z.infer<typeof projectSummarySchema>;

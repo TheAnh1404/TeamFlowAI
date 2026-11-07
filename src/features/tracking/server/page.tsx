@@ -36,11 +36,38 @@ export async function TrackingPage({ projectId, screen, taskId }: { projectId: s
   return (
     <div className={styles.workspace}>
       <div className={styles.header}>
-        <div><Link href={routes.app}>← Dự án của tôi</Link><h1 style={{ margin: "6px 0" }}>{data.project.name}</h1></div>
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 4 }}>
+            <Link href={routes.app} style={{ fontSize: "0.875rem", color: "var(--color-primary)", textDecoration: "none" }}>
+              ← Tất cả dự án
+            </Link>
+            <span
+              style={{
+                fontSize: "0.75rem",
+                fontWeight: 700,
+                padding: "2px 8px",
+                borderRadius: 4,
+                background: data.actor.role === "leader" ? "var(--color-primary-soft, #f0fdfa)" : "var(--color-surface-subtle, #f1f5f9)",
+                color: data.actor.role === "leader" ? "var(--color-primary, #0f766e)" : "var(--color-text-secondary, #475569)",
+                border: "1px solid",
+                borderColor: data.actor.role === "leader" ? "var(--color-primary, #0f766e)" : "var(--color-border-subtle, #e2e8f0)",
+              }}
+            >
+              {data.actor.role === "leader" ? "👑 VAI TRÒ: TRƯỞNG NHÓM" : "👤 VAI TRÒ: THÀNH VIÊN"}
+            </span>
+          </div>
+          <h1 style={{ margin: "4px 0" }}>{data.project.name}</h1>
+        </div>
         <p className={styles.muted}>Hạn dự án: {formatTime(data.project.deadline, data.project.timeZone)}</p>
       </div>
       <nav className={styles.tabs} aria-label="Điều hướng dự án">
-        {[["Công việc", routes.tasks(projectId), screen !== "chat"], ["Kế hoạch", routes.plan(projectId), false], ["Chat", routes.chat(projectId), screen === "chat"], ["Báo cáo", routes.reports(projectId), false]].map(([label, href, active]) => (
+        {[
+          ["Công việc", routes.tasks(projectId), screen !== "chat"],
+          ["Kế hoạch", routes.plan(projectId), false],
+          ["Chat", routes.chat(projectId), screen === "chat"],
+          ["Báo cáo", routes.reports(projectId), false],
+          ["Giám sát", `/app/projects/${projectId}/supervision`, false],
+        ].map(([label, href, active]) => (
           <Link key={String(label)} href={String(href)} aria-current={active ? "page" : undefined}>{label}</Link>
         ))}
       </nav>

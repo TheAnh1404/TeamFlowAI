@@ -1,15 +1,14 @@
 import "server-only";
 import { and, eq, inArray } from "drizzle-orm";
-import { getDb } from "@/server/db/client";
+import { getDb, type Database } from "@/server/db/client";
 import { plans, projectMembers, projects, tasks, users } from "@/server/db/schema";
 import { toProject, toUser } from "@/server/db/mappers";
 import { requireMembership } from "@/server/auth";
 import type { Session } from "@/server/auth/contracts";
 import type { ProjectSummary } from "@/contracts/project";
 
-export async function listProjectSummaries(session: Session): Promise<ProjectSummary[]> {
-  const db = getDb();
-  const joined = await db.select({ project: projects }).from(projects)
+export async function listProjectSummaries(session: Session, db: Database = getDb()): Promise<ProjectSummary[]> {
+  const joined = await db.select({ project: projects, member: projectMembers }).from(projects)
     .innerJoin(projectMembers, and(eq(projectMembers.projectId, projects.id), eq(projectMembers.userId, session.user.id)));
   if (!joined.length) return [];
   const ids = joined.map(row => row.project.id);
@@ -20,13 +19,15 @@ export async function listProjectSummaries(session: Session): Promise<ProjectSum
       .innerJoin(plans, and(eq(tasks.planId, plans.id), eq(tasks.projectId, plans.projectId)))
       .where(and(inArray(tasks.projectId, ids), eq(plans.status, "published"))),
   ]);
-  return joined.map(({ project }) => {
+  return joined.map(({ project, member }) => {
     const projectTasks = taskRows.filter(task => task.projectId === project.id);
     return {
       ...toProject(project),
       planStatus: planRows.find(plan => plan.projectId === project.id)?.status ?? null,
-      memberCount: memberRows.filter(member => member.projectId === project.id).length,
+      memberCount: memberRows.filter(m => m.projectId === project.id).length,
       taskCounts: { total: projectTasks.length, done: projectTasks.filter(task => task.status === "done").length, blocked: projectTasks.filter(task => task.status === "blocked").length },
+      myRole: member.role,
+      canAccept: member.canAccept,
     };
   });
 }

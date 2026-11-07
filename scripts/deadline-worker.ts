@@ -1,6 +1,6 @@
 import { loadEnvConfig } from "@next/env";
 import { setTimeout as delay } from "node:timers/promises";
-import { getDb, closeDb, isLocalDemo } from "../src/server/db/client";
+import { getDb, closeDb } from "../src/server/db/client";
 import { scanDeadlineRisks } from "../src/features/supervision/server/service";
 
 loadEnvConfig(process.cwd());
@@ -9,7 +9,6 @@ process.once("SIGINT",()=>controller.abort());
 process.once("SIGTERM",()=>controller.abort());
 async function main() {
   const once=process.argv.includes("--once");
-  if(isLocalDemo())throw Error("Local rehearsal runs the deadline loop inside the web process; do not open its database from another process.");
   const interval=Number(process.env.DEADLINE_SCAN_INTERVAL_MS??60000);
   if(!Number.isInteger(interval)||interval<1000||interval>3600000)throw Error("Invalid interval");
   const db=getDb();

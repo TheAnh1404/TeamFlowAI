@@ -150,9 +150,6 @@ export function ProjectWizard({
         );
       }
 
-      await apiFetch(api.plan(saved.project.id), planSchema, {
-        method: "POST",
-      });
       router.push(routes.plan(saved.project.id));
     } catch (e) {
       setError(
@@ -186,7 +183,7 @@ export function ProjectWizard({
 
       <Stepper
         step={step}
-        labels={["1. Mục tiêu dự án", "2. Thiết lập nhóm", "3. Xác nhận & Tạo nháp"]}
+        labels={["1. Mục tiêu dự án", "2. Thiết lập nhóm", "3. Xác nhận & Mời nhóm"]}
       />
 
       {error && (
@@ -367,7 +364,7 @@ export function ProjectWizard({
         {step === 3 && (
           <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
             <div style={{ borderBottom: "1px solid var(--color-border-subtle)", paddingBottom: "12px" }}>
-              <h2 style={{ fontSize: "1.25rem", margin: "0 0 4px" }}>Bước 3: Kiểm tra và Khởi tạo bản nháp</h2>
+              <h2 style={{ fontSize: "1.25rem", margin: "0 0 4px" }}>Bước 3: Kiểm tra và bắt đầu mời nhóm</h2>
               <p style={{ margin: 0, color: "var(--color-text-secondary)", fontSize: "0.875rem" }}>
                 Vui lòng kiểm tra lại thông tin. Sau khi bấm &ldquo;Tạo kế hoạch nháp&rdquo;, Planner AI sẽ phân rã công việc.
               </p>

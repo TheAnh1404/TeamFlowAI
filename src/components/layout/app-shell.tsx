@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import type { User } from "@/contracts";
+import { InvitationInbox } from "@/features/planning/components/invitation-inbox";
 
 export function AppShell({
   children,
@@ -43,6 +44,7 @@ export function AppShell({
         </Link>
         <span className="tf-community">DevDay · Da Nang</span>
         <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+          <InvitationInbox />
           <Link href="/app">Dự án của tôi</Link>
           {user && (
             <span
